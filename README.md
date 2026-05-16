@@ -1,22 +1,23 @@
-# CODING AGENTS: READ THIS FIRST
+# SpotLine
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+Vision AI로 오프라인 매장의 고객 행동을 비식별 데이터로 분석하고, 매출 향상을 위한 운영 전략을 제안하는 AI 매장 분석 플랫폼.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+## 기술 스택
 
-## What you should do — IMPORTANT
+- React + Vite
+- JavaScript
 
-**Read `vision-ai-web/project/analytics.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## 시작하기
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+```bash
+npm install
+npm run dev
+```
 
-## About the design files
+## 환경변수
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+`.env` 파일을 루트에 생성 후 필요한 변수를 설정하세요.
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
-
-## Bundle contents
-
-- `vision-ai-web/README.md` — this file
-- `vision-ai-web/project/` — the `vision ai web` project files (HTML prototypes, assets, components)
+```
+VITE_API_BASE_URL=
+```
