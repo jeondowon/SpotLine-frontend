@@ -16,7 +16,8 @@ export default function WeatherCorrTable() {
   }
 
   return (
-    <div className="corr-grid">
+    <div style={{overflowX: "auto", WebkitOverflowScrolling: "touch"}}>
+    <div className="corr-grid" style={{minWidth: 420}}>
       <div className="hh">날씨</div>
       <div className="hh">방문자</div>
       <div className="hh">평균 체류</div>
@@ -46,6 +47,7 @@ export default function WeatherCorrTable() {
           </Fragment>
         )
       })}
+    </div>
     </div>
   )
 }

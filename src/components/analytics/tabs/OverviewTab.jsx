@@ -9,7 +9,7 @@ import GenderCard from '../GenderCard'
 import AgeCard from '../AgeCard'
 import Funnel from '../Funnel'
 import WeatherCorrTable from '../WeatherCorrTable'
-import { DAYS_30, HOURS } from '../../../data/analytics'
+import { HOURS } from '../../../data/analytics'
 
 export default function OverviewTab() {
   return (
@@ -17,46 +17,50 @@ export default function OverviewTab() {
       {/* KPI 요약 */}
       <div>
         <div className="section-h"><h2>핵심 분석 요약</h2><span className="sub">· 최근 30일</span><span className="meta">기준일 2026.05.16</span></div>
-        <div className="kpis-6" style={{marginTop: 10}}>
-          <KPI className="compact" label="총 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
-               value="11,238" unit="명" delta={9.2} spark={DAYS_30.slice(-12)} sparkColor="oklch(0.62 0.14 250)"/>
-          <KPI className="compact" label="평균 체류 시간" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
-               value="23분" delta={4.2} hint="이전 30일 대비"/>
-          <KPI className="compact" label="입구→계산대 전환율" icon={<Ic.Trend/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
-               value="33.7" unit="%" delta={1.6}/>
-          <KPI className="compact" label="가장 방문 많은 시간대" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
-               value="19시" hint="시간당 평균 124명"/>
-          <KPI className="compact" label="주요 방문 연령대" icon={<Ic.Users/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
-               value="20대" hint="전체의 38% · AI 추정"/>
-          <KPI className="compact" label="날씨 영향도" icon={<Ic.Sun/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
-               value="높음" hint={<span>상관계수 <b className="mono">0.78</b></span>}/>
+        <div className="kpi-scroll-wrap">
+          <div className="kpis-6">
+            <KPI className="compact" label="총 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
+                 value="11,238" unit="명" delta={9.2}/>
+            <KPI className="compact" label="평균 체류 시간" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
+                 value="23분" delta={4.2} hint="이전 30일 대비"/>
+            <KPI className="compact" label="입구→계산대 전환율" icon={<Ic.Trend/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+                 value="33.7" unit="%" delta={1.6}/>
+            <KPI className="compact" label="가장 방문 많은 시간대" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
+                 value="19시" hint="시간당 평균 124명"/>
+            <KPI className="compact" label="주요 방문 연령대" icon={<Ic.Users/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+                 value="20대" hint="전체의 38% · AI 추정"/>
+            <KPI className="compact" label="날씨 영향도" icon={<Ic.Sun/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
+                 value="높음" hint={<span>상관계수 <b className="mono">0.78</b></span>}/>
+          </div>
         </div>
       </div>
 
       {/* 방문자 분석 */}
       <div>
         <div className="section-h"><h2>방문자 분석</h2><span className="sub">· 시간대, 일별, 인구 통계</span></div>
-        <div className="grid-2-1" style={{marginTop: 10}}>
-          <div className="card">
-            <div className="card-h">
-              <h3>시간대별 평균 방문자</h3>
-              <span className="sub">· 30일 평균</span>
-              <div className="right"><span className="chip dot">방문자</span><span className="chip">전월 비교</span></div>
-            </div>
-            <div className="card-b" style={{padding: "8px 12px 14px"}}>
-              <HoursChart height={220}/>
-              <div className="legend">
-                <div><span className="sw" style={{background: "var(--accent)"}}/>최근 30일</div>
-                <div><span className="sw" style={{background: "#C9D0DA"}}/>이전 30일</div>
-                <div style={{marginLeft:"auto", fontSize:11, color:"#9AA3AF"}}>단위: 시간당 방문자(명)</div>
-              </div>
+        <div className="card" style={{marginTop: 10}}>
+          <div className="card-h">
+            <h3>시간대별 평균 방문자</h3>
+            <span className="sub">· 30일 평균</span>
+            <div className="right"><span className="chip dot">방문자</span><span className="chip">전월 비교</span></div>
+          </div>
+          <div className="card-b" style={{padding: "8px 16px 16px"}}>
+            <HoursChart height={240}/>
+            <div className="legend" style={{marginTop: 6}}>
+              <div><span className="sw" style={{background: "var(--accent)"}}/>최근 30일</div>
+              <div><span className="sw" style={{background: "#C9D0DA"}}/>이전 30일</div>
+              <div style={{marginLeft:"auto", fontSize:11, color:"#9AA3AF"}}>단위: 시간당 방문자(명)</div>
             </div>
           </div>
+        </div>
+        <div className="grid-2" style={{marginTop: 14, gridTemplateColumns: "1.4fr 1fr"}}>
           <div className="card">
             <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도</span></div>
-            <div className="card-b">
-              <Heatmap/>
-              <div style={{marginTop: 12, display:"flex", alignItems:"center", gap: 8, fontSize: 11, color:"var(--muted)"}}>
+            <div className="card-b" style={{padding: "16px 16px 14px"}}>
+              <div className="heat-wrap">
+                <Heatmap/>
+              </div>
+              <div style={{marginTop: 12, display:"flex", alignItems:"center", gap: 8, fontSize: 11, color:"var(--muted)", flexWrap:"wrap"}}>
                 <span>낮음</span>
                 <div style={{display:"flex", gap: 2}}>
                   {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map(a => (
@@ -68,12 +72,14 @@ export default function OverviewTab() {
               </div>
             </div>
           </div>
-        </div>
-        <div className="grid-3" style={{marginTop: 12}}>
-          <div className="card">
+          <div className="card" style={{display:"flex", flexDirection:"column"}}>
             <div className="card-h"><h3>일별 방문자 추이</h3><span className="sub">· 30일</span></div>
-            <div className="card-b"><DailyBars days={30}/></div>
+            <div className="card-b" style={{flex:1, padding:0}}>
+              <DailyBars days={30}/>
+            </div>
           </div>
+        </div>
+        <div className="grid-2" style={{marginTop: 14}}>
           <GenderCard/>
           <AgeCard/>
         </div>
@@ -206,7 +212,7 @@ export default function OverviewTab() {
       {/* 날씨 영향 */}
       <div>
         <div className="section-h"><h2>날씨 영향 분석</h2><span className="sub">· 날씨 × 비즈니스 지표</span></div>
-        <div className="grid-2-1" style={{marginTop: 10}}>
+        <div className="grid-2" style={{marginTop: 10}}>
           <div className="card">
             <div className="card-h"><h3>기온 vs 방문자 수</h3><span className="sub">· 30일 일별</span><div className="right"><span className="chip">상관관계</span></div></div>
             <div className="card-b">

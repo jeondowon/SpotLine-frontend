@@ -198,3 +198,14 @@
   .peakbars{ display:flex; align-items:flex-end; gap: 3px; height: 28px; margin-top: 6px; }
   .peakbars span{ width: 5px; background: var(--accent); border-radius: 2px; opacity: .7; }
   .peakbars span.hi{ opacity: 1; background: oklch(0.55 0.18 270); }
+
+  /* Responsive layout */
+  @media (max-width: 900px) {
+    .app{ grid-template-columns: 1fr; }
+    .sb{ display: none; }
+    .content{ padding: 16px 16px 28px; }
+    .hdr{ padding: 10px 16px; }
+    .kpis{ grid-template-columns: repeat(2, 1fr); }
+    .grid-main{ grid-template-columns: 1fr; }
+    .grid-second{ grid-template-columns: 1fr; }
+  }

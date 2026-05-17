@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import Header from '../components/dashboard/Header'
 import TrafficChart from '../components/dashboard/TrafficChart'
@@ -20,7 +20,6 @@ const TWEAK_DEFAULTS = {
 
 export default function DashboardPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
-  const [tab, setTab] = useState(0)
 
   const preset = PRESETS[t.storePreset] || PRESETS.cafe
 
@@ -32,7 +31,7 @@ export default function DashboardPage() {
     <div className="app">
       <Sidebar/>
       <div className="main">
-        <Header storeName={preset.name} tab={tab} onTab={setTab}/>
+        <Header storeName={preset.name}/>
 
         <div className="content">
 

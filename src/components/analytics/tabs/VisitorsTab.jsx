@@ -24,27 +24,46 @@ export default function VisitorsTab() {
         </div>
       </div>
 
-      <div className="grid-2-1">
-        <div className="card">
-          <div className="card-h">
-            <h3>시간대별 방문자 (30일 평균)</h3>
-            <div className="right"><span className="chip dot">최근 30일</span><span className="chip">이전 30일</span></div>
-          </div>
-          <div className="card-b" style={{padding: "8px 12px 14px"}}><HoursChart height={260}/></div>
+      <div className="card">
+        <div className="card-h">
+          <h3>시간대별 방문자 (30일 평균)</h3>
+          <div className="right"><span className="chip dot">최근 30일</span><span className="chip">이전 30일</span></div>
         </div>
-        <div className="card">
-          <div className="card-h"><h3>요일 × 시간대 히트맵</h3></div>
-          <div className="card-b"><Heatmap/></div>
+        <div className="card-b" style={{padding: "8px 16px 16px"}}>
+          <HoursChart height={240}/>
+          <div className="legend" style={{marginTop: 6}}>
+            <div><span className="sw" style={{background: "var(--accent)"}}/>최근 30일</div>
+            <div><span className="sw" style={{background: "#C9D0DA"}}/>이전 30일</div>
+            <div style={{marginLeft:"auto", fontSize:11, color:"#9AA3AF"}}>단위: 시간당 방문자(명)</div>
+          </div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-h">
-          <h3>일별 방문자 추이</h3>
-          <span className="sub">· 30일</span>
-          <div className="right"><span className="chip">주말 강조</span></div>
+      <div className="grid-2" style={{gridTemplateColumns: "1.4fr 1fr"}}>
+        <div className="card">
+          <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도</span></div>
+          <div className="card-b" style={{padding: "16px 16px 14px"}}>
+            <div className="heat-wrap">
+              <Heatmap/>
+            </div>
+            <div style={{marginTop: 12, display:"flex", alignItems:"center", gap: 8, fontSize: 11, color:"var(--muted)", flexWrap:"wrap"}}>
+              <span>낮음</span>
+              <div style={{display:"flex", gap: 2}}>
+                {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map(a => (
+                  <div key={a} style={{width: 14, height: 12, borderRadius: 3, background: `oklch(0.62 0.14 250 / ${a})`}}/>
+                ))}
+              </div>
+              <span>높음</span>
+              <span style={{marginLeft:"auto"}} className="mono">토요일 19시 · 피크</span>
+            </div>
+          </div>
         </div>
-        <div className="card-b"><DailyBars days={30}/></div>
+        <div className="card" style={{display:"flex", flexDirection:"column"}}>
+          <div className="card-h"><h3>일별 방문자 추이</h3><span className="sub">· 30일</span></div>
+          <div className="card-b" style={{flex:1, padding:0}}>
+            <DailyBars days={30}/>
+          </div>
+        </div>
       </div>
 
       <div className="grid-2"><GenderCard/><AgeCard/></div>

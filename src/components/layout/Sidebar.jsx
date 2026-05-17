@@ -61,14 +61,6 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div>
-        <div className="sb-section-label">매장</div>
-        <div className="sb-nav">
-          <div className="sb-item"><Ic.Door/><span>입구 존</span></div>
-          <div className="sb-item"><Ic.Cart/><span>계산대 존</span></div>
-        </div>
-      </div>
-
       <div className="sb-store">
         <div className="ava">박</div>
         <div style={{flex:1, minWidth: 0}}>
