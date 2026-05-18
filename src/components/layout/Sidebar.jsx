@@ -5,7 +5,6 @@ const NAV_ITEMS = [
   { id: "dashboard", label: "대시보드",    ic: <Ic.Dash/>,   to: "/" },
   { id: "analytics", label: "분석",        ic: <Ic.Chart/>,  to: "/analytics" },
   { id: "ai",        label: "AI 인사이트", ic: <Ic.Spark/>,  to: "/insights", badge: "NEW" },
-  { id: "reports",   label: "리포트",      ic: <Ic.Report/>, to: "/reports" },
   { id: "settings",  label: "설정",        ic: <Ic.Gear/>,   to: "/settings" },
 ]
 
@@ -16,7 +15,6 @@ export default function Sidebar() {
     if (id === "dashboard") return pathname === "/"
     if (id === "analytics") return pathname === "/analytics"
     if (id === "ai")        return pathname === "/insights"
-    if (id === "reports")   return pathname === "/reports"
     if (id === "settings")  return pathname === "/settings"
     return false
   }

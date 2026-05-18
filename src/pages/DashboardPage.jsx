@@ -1,68 +1,164 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import Header from '../components/dashboard/Header'
 import TrafficChart from '../components/dashboard/TrafficChart'
 import Gauge from '../components/dashboard/Gauge'
 import KPI from '../components/ui/KPI'
 import { Ic } from '../components/ui/Icons'
-import { TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakToggle } from '../components/ui/TweaksPanel'
+import { TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakToggle, TweakNumber } from '../components/ui/TweaksPanel'
 import { useTweaks } from '../hooks/useTweaks'
-import { PRESETS, AGE_GROUPS, GENDER, PEAK_BARS } from '../data/dashboard'
+import { fetchRawAnalytics, fetchDailyBriefing, fetchMarketingRecommendations } from '../api/index'
 
 const TWEAK_DEFAULTS = {
   accent: '#3B7CF6',
-  density: 'regular',
+  videoId: 1,
+  chartStyle: 'area',
   showAiPanel: true,
   showPrivacyBadge: true,
-  chartStyle: 'area',
-  storePreset: 'cafe',
+}
+
+const CONGESTION_LEVEL = { low: 20, medium: 50, high: 80 }
+
+const AGE_GROUP_KEYS = [
+  { label: '20–29', keys: ['20s'] },
+  { label: '30–39', keys: ['30s'] },
+  { label: '40–49', keys: ['40s'] },
+  { label: '50대+', keys: ['50s', '60s', '70s', '80s'] },
+  { label: '기타',  keys: ['0s', '10s'] },
+]
+
+function formatDwellTime(seconds) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}분 ${String(s).padStart(2, '0')}초`
+}
+
+function congestionLabel(level) {
+  if (level < 34) return '여유'
+  if (level < 67) return '보통'
+  return '혼잡'
+}
+
+function computeAgeGroups(persons) {
+  if (!persons?.length) return []
+  const counts = {}
+  for (const p of persons) counts[p.age_group] = (counts[p.age_group] ?? 0) + 1
+  return AGE_GROUP_KEYS.map(({ label, keys }) => {
+    const count = keys.reduce((sum, k) => sum + (counts[k] ?? 0), 0)
+    return { label, count, pct: Math.round((count / persons.length) * 100) }
+  })
 }
 
 export default function DashboardPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
 
-  const preset = PRESETS[t.storePreset] || PRESETS.cafe
+  const [fetchState, setFetchState] = useState({ videoId: null, raw: null, briefing: null, marketing: null, error: null })
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', t.accent)
   }, [t.accent])
 
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([fetchRawAnalytics(t.videoId), fetchDailyBriefing(), fetchMarketingRecommendations()])
+      .then(([raw, briefing, marketing]) => {
+        if (!cancelled) setFetchState({ videoId: t.videoId, raw, briefing, marketing, error: null })
+      })
+      .catch(e => {
+        if (!cancelled) setFetchState({ videoId: t.videoId, raw: null, briefing: null, marketing: null, error: e.message })
+      })
+    return () => { cancelled = true }
+  }, [t.videoId])
+
+  const loading    = fetchState.videoId !== t.videoId
+  const raw        = fetchState.raw
+  const briefing   = fetchState.briefing
+  const marketing  = fetchState.marketing
+  const apiError   = fetchState.error
+
+  const persons      = raw?.persons ?? []
+  const visitorCount = raw?.summary?.total_visitors ?? 0
+  const congestion   = CONGESTION_LEVEL[raw?.summary?.peak_congestion] ?? 0
+  const dwellSecs    = raw?.summary?.avg_dwell_time_seconds ?? 0
+  const dwellDisplay = dwellSecs ? formatDwellTime(Math.round(dwellSecs)) : '—'
+  const entry        = persons.filter(p => p.entrance_event).length
+  const manCount     = persons.filter(p => p.gender === 'male').length
+  const womanCount   = persons.filter(p => p.gender === 'female').length
+  const genderTotal  = manCount + womanCount
+  const femPct       = genderTotal > 0 ? Math.round((womanCount / genderTotal) * 100) : 50
+  const malePct      = 100 - femPct
+  const ageGroups    = computeAgeGroups(persons)
+
   return (
     <div className="app">
       <Sidebar/>
       <div className="main">
-        <Header storeName={preset.name}/>
+        <Header storeName={`비디오 #${t.videoId} 분석`}/>
 
         <div className="content">
 
+          {apiError && (
+            <div style={{
+              padding: '12px 16px', marginBottom: 8, borderRadius: 10,
+              background: '#FEF2F2', border: '1px solid #FECACA',
+              fontSize: 13, color: '#DC2626',
+            }}>
+              데이터를 불러오지 못했습니다: {apiError}
+            </div>
+          )}
+
           <div className="row-greet">
             <div className="greet">
-              <h1>안녕하세요, {preset.ownerInitial}점주님 — 오늘 매장 상태를 한눈에 보여드릴게요.</h1>
-              <p>지금 매장은 평소보다 활발해요. 19시 피크 시간대까지 약 1시간 30분 남았습니다.</p>
+              <h1>
+                {loading
+                  ? '데이터를 불러오는 중입니다...'
+                  : `오늘 매장 현황을 한눈에 보여드릴게요.`}
+              </h1>
+              <p>
+                {loading
+                  ? '잠시만 기다려 주세요.'
+                  : `총 방문자 ${visitorCount}명 · 혼잡도 ${congestionLabel(congestion)} · 평균 체류 ${dwellDisplay}`}
+              </p>
             </div>
             <span className="live-pill"><span className="live-dot"/>실시간 업데이트 중</span>
           </div>
 
           <div className="kpis">
             <KPI label="오늘 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
-                 value={preset.visitorsToday.toLocaleString()} unit="명" delta={preset.deltaV}
-                 spark={[18,22,30,42,38,52,68,80,92,110,124,96]} sparkColor="oklch(0.62 0.14 250)"/>
+                 value={visitorCount.toLocaleString()} unit="명"
+                 hint="실시간 데이터"/>
             <KPI label="현재 혼잡도" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
-                 value={preset.congestion} unit="/ 100" delta={preset.deltaC}
-                 spark={[30,35,42,55,68,72,64,58,62]} sparkColor="oklch(0.65 0.14 65)"/>
+                 value={congestion} unit="/ 100"
+                 hint="실시간 데이터"/>
             <KPI label="평균 체류 시간" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
-                 value={preset.stay} delta={preset.deltaS}
-                 spark={[18,19,21,22,20,23,24,23,23]} sparkColor="oklch(0.55 0.13 155)"/>
-            <KPI label="오늘 전환율" icon={<Ic.Trend/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
-                 value={preset.conv.toFixed(1)} unit="%" delta={preset.deltaCv}
-                 spark={[28,30,32,35,33,36,38,37,38]} sparkColor="oklch(0.55 0.14 295)"/>
+                 value={dwellDisplay}
+                 hint="실시간 데이터"/>
+            <KPI label="입장 이벤트" icon={<Ic.Door/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+                 value={entry} unit="건"
+                 hint="오늘 누적"/>
           </div>
 
           <div className="compare">
-            <div><div className="l">어제 대비 방문자</div><div className="v mono">+45명</div><div className="d delta up" style={{display:'inline-block'}}>▲ 12.3%</div></div>
-            <div><div className="l">어제 같은 시간</div><div className="v mono">88명</div><div className="d" style={{color:'#6B7280'}}>17:00 기준</div></div>
-            <div><div className="l">이번주 평균</div><div className="v mono">368명/일</div><div className="d" style={{color:'#6B7280'}}>최근 7일</div></div>
-            <div><div className="l">목표 달성률</div><div className="v mono">82.4%</div><div className="d" style={{color:'#6B7280'}}>일일 목표 500명</div></div>
+            <div>
+              <div className="l">입구 존 진입</div>
+              <div className="v mono">{entry}건</div>
+              <div className="d" style={{color:'#6B7280'}}>오늘 누적</div>
+            </div>
+            <div>
+              <div className="l">방문자 수</div>
+              <div className="v mono">{visitorCount}명</div>
+              <div className="d" style={{color:'#6B7280'}}>오늘 누적</div>
+            </div>
+            <div>
+              <div className="l">성별 비율</div>
+              <div className="v mono">여 {femPct}% · 남 {malePct}%</div>
+              <div className="d" style={{color:'#6B7280'}}>익명 추정</div>
+            </div>
+            <div>
+              <div className="l">혼잡도</div>
+              <div className="v mono">{congestionLabel(congestion)}</div>
+              <div className="d" style={{color:'#6B7280'}}>현재 상태</div>
+            </div>
           </div>
 
           <div className="grid-main">
@@ -88,28 +184,22 @@ export default function DashboardPage() {
               </div>
               <div className="card-b status-grid">
                 <div className="gauge-wrap">
-                  <Gauge value={preset.congestion}/>
+                  <Gauge value={congestion}/>
                   <div className="gauge-meta">
-                    <div className="lvl">보통<span className="small">혼잡도</span></div>
-                    <div className="desc">평일 토요일 평균보다 약간 높은 수준이에요. 직원 1명 추가 배치를 고려해보세요.</div>
+                    <div className="lvl">{congestionLabel(congestion)}<span className="small">혼잡도</span></div>
+                    <div className="desc">
+                      {congestion < 34 && '매장이 여유로운 상태입니다. 고객 응대에 집중하세요.'}
+                      {congestion >= 34 && congestion < 67 && '평소 수준의 혼잡도입니다. 상황을 주시하세요.'}
+                      {congestion >= 67 && '혼잡도가 높습니다. 직원 추가 배치를 고려해보세요.'}
+                    </div>
                   </div>
                 </div>
 
                 <div className="status-rows">
-                  <div className="status-row"><span className="k">현재 매장 내 인원</span><span className="v mono">23명</span></div>
-                  <div className="status-row"><span className="k">최근 10분 입장</span><span className="v mono">8명</span></div>
-                  <div className="status-row"><span className="k">최근 10분 이탈</span><span className="v mono">5명</span></div>
-                  <div className="status-row"><span className="k">피크 시간대</span><span className="v">{preset.peak}</span></div>
-                  <div className="status-row"><span className="k">예상 다음 피크</span><span className="v">19:00 (+72분)</span></div>
-                </div>
-
-                <div>
-                  <div style={{fontSize:11.5, color:"#6B7280", marginBottom: 6}}>오늘 분단위 혼잡도</div>
-                  <div className="peakbars">
-                    {PEAK_BARS.map((v, i) => (
-                      <span key={i} className={v > 70 ? "hi" : ""} style={{height: (v/100)*28+2}}/>
-                    ))}
-                  </div>
+                  <div className="status-row"><span className="k">방문자 수</span><span className="v mono">{visitorCount}명</span></div>
+                  <div className="status-row"><span className="k">남성 방문자</span><span className="v mono">{manCount}명</span></div>
+                  <div className="status-row"><span className="k">여성 방문자</span><span className="v mono">{womanCount}명</span></div>
+                  <div className="status-row"><span className="k">입구 이벤트</span><span className="v mono">{entry}건</span></div>
                 </div>
               </div>
             </div>
@@ -126,91 +216,53 @@ export default function DashboardPage() {
                   <div className="zone-ic" style={{background:"oklch(0.95 0.03 250)", color:"oklch(0.48 0.16 250)"}}><Ic.Door/></div>
                   <div>
                     <div className="zone-name">입구 존</div>
-                    <div className="zone-sub">방문자 진입 이벤트 · 어제 +9.2%</div>
+                    <div className="zone-sub">방문자 진입 이벤트</div>
                   </div>
                   <div className="zone-val">
-                    <div className="n mono">{preset.entry}</div>
+                    <div className="n mono">{entry}</div>
                     <div className="d">건</div>
                   </div>
                   <div className="zone-bar"><div style={{width:"100%", background:"oklch(0.62 0.14 250)"}}/></div>
                 </div>
-                <div className="zone-row">
-                  <div className="zone-ic" style={{background:"oklch(0.95 0.04 295)", color:"oklch(0.50 0.16 295)"}}><Ic.Cart/></div>
-                  <div>
-                    <div className="zone-name">계산대 존</div>
-                    <div className="zone-sub">결제 영역 진입 · 어제 +14.4%</div>
-                  </div>
-                  <div className="zone-val">
-                    <div className="n mono">{preset.checkout}</div>
-                    <div className="d">건</div>
-                  </div>
-                  <div className="zone-bar"><div style={{width:`${(preset.checkout/preset.entry)*100}%`, background:"oklch(0.55 0.14 295)"}}/></div>
-                </div>
-                <div style={{display:'flex', justifyContent:'space-between', marginTop: 12, padding: "10px 12px", borderRadius: 10, background:"#F7F9FC", fontSize: 12}}>
-                  <span style={{color:"#6B7280"}}>입구 → 계산대 전환율</span>
-                  <span style={{fontWeight:700}} className="mono">{((preset.checkout/preset.entry)*100).toFixed(1)}%</span>
-                </div>
               </div>
             </div>
 
-            <div className="card">
-              <div className="card-h">
-                <h3>오늘 날씨</h3>
-                <span className="sub">· 서울 강남</span>
-                <div className="right"><span className="chip">기상청</span></div>
-              </div>
-              <div className="card-b">
-                <div className="wx">
-                  <div className="wx-icn"><Ic.Sun/></div>
-                  <div>
-                    <div className="wx-temp mono">23°</div>
-                    <div className="wx-desc">맑음 · 체감 22° · 자외선 보통</div>
-                  </div>
+            {t.showAiPanel && (
+              <div className="card">
+                <div className="card-h">
+                  <span className="ai-h-badge"><Ic.Sparkle/> AI 인사이트</span>
+                  <span className="sub">비디오 #{t.videoId} 기반</span>
+                  <div className="right"><span className="chip">베타</span></div>
                 </div>
-                <div className="wx-stats">
-                  <div className="wx-stat"><div className="l">강수확률</div><div className="v mono">10%</div></div>
-                  <div className="wx-stat"><div className="l">습도</div><div className="v mono">48%</div></div>
-                  <div className="wx-stat"><div className="l">풍속</div><div className="v mono">2.1m/s</div></div>
-                </div>
-                <div className="wx-note">
-                  맑은 주말 오후엔 평소보다 방문자가 <b>14%</b> 더 많아요. 야외 입간판을 활용해 보세요.
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-h">
-                <span className="ai-h-badge"><Ic.Sparkle/> AI 인사이트</span>
-                <span className="sub">오늘 자동 생성 · 3건</span>
-                <div className="right"><span className="chip">베타</span></div>
-              </div>
-              <div className="card-b ai-list">
-                <div className="ai-card">
-                  <div className="num">01</div>
-                  <div>
-                    <div className="t">19시 피크에 직원 1명 추가 배치 권장</div>
-                    <div className="b">지난 4주간 토요일 19–20시 혼잡도가 평균 76으로 가장 높았어요. 대기 이탈을 줄이려면 미리 인원을 배치하세요.</div>
-                    <span className="tag k">운영 액션</span>
-                  </div>
-                </div>
-                <div className="ai-card">
-                  <div className="num">02</div>
-                  <div>
-                    <div className="t">20대 여성 비중이 어제보다 8.2%p 증가</div>
-                    <div className="b">신상품 &lsquo;딸기 라떼&rsquo; 출시 후 20대 여성 방문이 늘었어요. SNS 이벤트와 매장 내 시즌 POP를 함께 운영하면 효과가 더 커질 수 있어요.</div>
-                    <span className="tag r">기회 발견</span>
-                  </div>
-                </div>
-                <div className="ai-card">
-                  <div className="num">03</div>
-                  <div>
-                    <div className="t">계산대 전환율이 5일 연속 상승 중</div>
-                    <div className="b">입구 대비 계산대 진입 비율이 5월 12일 28% → 오늘 32%. 신규 진열 동선 변경의 효과로 보여요. 다음 주에도 유지 권장.</div>
-                    <span className="tag">트렌드</span>
-                  </div>
+                <div className="card-b ai-list">
+                  {briefing?.message && (
+                    <div className="ai-card">
+                      <div className="num">01</div>
+                      <div>
+                        <div className="t">일일 브리핑</div>
+                        <div className="b">{briefing.message}</div>
+                        <span className="tag">AI 분석</span>
+                      </div>
+                    </div>
+                  )}
+                  {marketing?.message && (
+                    <div className="ai-card">
+                      <div className="num">02</div>
+                      <div>
+                        <div className="t">마케팅 추천</div>
+                        <div className="b">{marketing.message}</div>
+                        <span className="tag k">마케팅</span>
+                      </div>
+                    </div>
+                  )}
+                  {!briefing && !marketing && !loading && (
+                    <div style={{fontSize: 13, color: '#9AA3AF', padding: '8px 0'}}>
+                      브리핑 데이터가 없습니다.
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="grid-second" style={{gridTemplateColumns:"1.4fr 1fr 1fr"}}>
@@ -222,13 +274,16 @@ export default function DashboardPage() {
               </div>
               <div className="card-b">
                 <div className="ages">
-                  {AGE_GROUPS.map((a) => (
-                    <div className="age-row" key={a.label}>
-                      <div className="l mono">{a.label}</div>
-                      <div className="track"><div className="fill" style={{width: a.pct + "%"}}/></div>
-                      <div className="v mono">{a.pct}%</div>
-                    </div>
-                  ))}
+                  {ageGroups.length > 0
+                    ? ageGroups.map((a) => (
+                        <div className="age-row" key={a.label}>
+                          <div className="l mono">{a.label}</div>
+                          <div className="track"><div className="fill" style={{width: a.pct + "%"}}/></div>
+                          <div className="v mono">{a.pct}%</div>
+                        </div>
+                      ))
+                    : <div style={{fontSize: 13, color: '#9AA3AF'}}>연령 데이터 없음</div>
+                  }
                 </div>
                 <div className="priv" style={{marginTop: 14, fontSize: 11.5}}>
                   <Ic.Shield color="#9AA3AF"/>
@@ -245,20 +300,20 @@ export default function DashboardPage() {
               <div className="card-b" style={{display:"flex", flexDirection:"column", gap: 16}}>
                 <div style={{display:"flex", alignItems:"center", gap: 12}}>
                   <div style={{height: 10, borderRadius: 99, background: "#F1F3F6", flex: 1, overflow: "hidden", position: "relative"}}>
-                    <div style={{position:"absolute", inset:0, width: GENDER.f+"%", background: "oklch(0.7 0.13 0)"}}/>
-                    <div style={{position:"absolute", left: GENDER.f+"%", right: 0, top:0, bottom:0, background: "oklch(0.62 0.13 250)"}}/>
+                    <div style={{position:"absolute", inset:0, width: femPct+"%", background: "oklch(0.7 0.13 0)"}}/>
+                    <div style={{position:"absolute", left: femPct+"%", right: 0, top:0, bottom:0, background: "oklch(0.62 0.13 250)"}}/>
                   </div>
                 </div>
                 <div style={{display:"flex", justifyContent: "space-between", fontSize: 13}}>
                   <div>
                     <div style={{color:"#6B7280", fontSize: 11.5}}>여성</div>
-                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{GENDER.f}%</div>
-                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">239명</div>
+                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{femPct}%</div>
+                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">{womanCount}명</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{color:"#6B7280", fontSize: 11.5}}>남성</div>
-                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{GENDER.m}%</div>
-                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">173명</div>
+                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{malePct}%</div>
+                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">{manCount}명</div>
                   </div>
                 </div>
                 <div className="priv" style={{fontSize: 11.5}}>
@@ -270,7 +325,7 @@ export default function DashboardPage() {
             <div className="card">
               <div className="card-h">
                 <h3>오늘의 한 줄 요약</h3>
-                <span className="sub">· AI 자동 생성</span>
+                <span className="sub">· 데이터 기반</span>
               </div>
               <div className="card-b" style={{display:"flex", flexDirection:"column", gap: 12}}>
                 <div style={{
@@ -279,31 +334,36 @@ export default function DashboardPage() {
                   borderRadius: 12, padding: "14px 14px", fontSize: 13.5, lineHeight: 1.6, color:"#1F2733"
                 }}>
                   <Ic.Sparkle color="oklch(0.50 0.16 270)"/>
-                  <div style={{marginTop: 8, fontWeight: 600, letterSpacing: "-0.005em"}}>오늘은 평소보다 활기찬 토요일이에요.</div>
-                  <div style={{marginTop: 6, color: "#4B5260"}}>
-                    방문자가 어제보다 <b>12.3%</b> 증가했고, 20대 여성 비중이 두드러져요. 19시 피크에 인원 보강을 추천드려요.
-                  </div>
-                </div>
-                <div style={{display:"flex", gap: 8}}>
-                  <button className="chip" style={{cursor:"default", padding: "6px 11px", fontSize: 12, fontWeight: 500}}>리포트 만들기</button>
-                  <button className="chip" style={{cursor:"default", padding: "6px 11px", fontSize: 12, fontWeight: 500, background:"#0F1419", color:"#fff", borderColor:"#0F1419"}}>분석 더 보기</button>
+                  {loading
+                    ? <div style={{marginTop: 8, color: '#9AA3AF'}}>분석 중...</div>
+                    : <>
+                        <div style={{marginTop: 8, fontWeight: 600, letterSpacing: "-0.005em"}}>
+                          총 방문자 {visitorCount}명, 혼잡도 {congestionLabel(congestion)} 수준이에요.
+                        </div>
+                        <div style={{marginTop: 6, color: "#4B5260"}}>
+                          평균 체류 시간 <b>{dwellDisplay}</b>.
+                          {femPct > malePct ? ` 여성 방문자 비중(${femPct}%)이 더 높아요.` : ` 남성 방문자 비중(${malePct}%)이 더 높아요.`}
+                        </div>
+                      </>
+                  }
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="priv" style={{padding:"6px 4px 12px", fontSize: 12}}>
-            <Ic.Shield color="#9AA3AF"/>
-            본 대시보드는 Vision AI 기반 익명 집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은 수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
-          </div>
+          {t.showPrivacyBadge && (
+            <div className="priv" style={{padding:"6px 4px 12px", fontSize: 12}}>
+              <Ic.Shield color="#9AA3AF"/>
+              본 대시보드는 Vision AI 기반 익명 집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은 수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
+            </div>
+          )}
         </div>
       </div>
 
       <TweaksPanel title="Tweaks">
-        <TweakSection label="매장 프리셋"/>
-        <TweakRadio label="유형" value={t.storePreset}
-          options={[{value:"cafe", label:"카페"}, {value:"retail", label:"리테일"}, {value:"resto", label:"식당"}]}
-          onChange={(v) => setTweak("storePreset", v)}/>
+        <TweakSection label="데이터"/>
+        <TweakNumber label="비디오 ID" value={t.videoId} min={1} step={1}
+          onChange={(v) => setTweak("videoId", v)}/>
 
         <TweakSection label="비주얼"/>
         <TweakColor label="액센트" value={t.accent}
