@@ -11,10 +11,9 @@ import {
 } from "../components/ui/TweaksPanel";
 import { useTweaks } from "../hooks/useTweaks";
 import ChatPanel from "../components/ai/ChatPanel";
-import { fetchRawAnalytics, fetchDailyBriefing, fetchMarketingRecommendations } from "../api/index";
-import { generateSummary, generateInsightCards, generateStrategies, generateActions } from "../api/gemini";
+import { fetchRawAnalytics, fetchDailyBriefing, fetchMarketingRecommendations, aiSummary, aiInsightCards, aiStrategies, aiActions } from "../api/index";
 
-const TWEAK_DEFAULTS = { accent: "#3B7CF6", videoId: 1 };
+const TWEAK_DEFAULTS = { accent: "#3B7CF6", videoId: 1, startAt: "2026-05-17T15:00:00", endAt: "2026-05-17T15:18:57" };
 
 const TYPE_META = {
   opportunity: {
@@ -49,12 +48,6 @@ const PRIORITY_META = {
   low: { color: "oklch(0.42 0.12 155)", label: "낮음" },
 };
 
-const TAG_META = {
-  운영: { color: "oklch(0.48 0.16 250)", bg: "oklch(0.95 0.03 250)" },
-  마케팅: { color: "oklch(0.50 0.16 295)", bg: "oklch(0.95 0.04 295)" },
-  공간: { color: "oklch(0.42 0.12 155)", bg: "oklch(0.95 0.04 155)" },
-  상품: { color: "oklch(0.55 0.14 65)", bg: "oklch(0.95 0.05 80)" },
-};
 
 function SkeletonBlock({ width = "100%", height = 16, radius = 6, style }) {
   return (
@@ -77,7 +70,6 @@ const emptySection = () => ({ loading: false, data: null, error: null });
 
 export default function InsightsPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [stratTab, setStratTab] = useState("time");
 
   const [backendState, setBackendState] = useState({
     videoId: null,
@@ -93,8 +85,8 @@ export default function InsightsPage() {
   });
 
   async function runSection(key, fetchFn) {
-    if (!backendState.data || sections[key].loading) return;
-    const cacheKey = `gemini-${key}-v${t.videoId}`;
+    if (sections[key].loading) return;
+    const cacheKey = `ai-${key}-${t.startAt}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -104,7 +96,7 @@ export default function InsightsPage() {
     }
     setSections(prev => ({ ...prev, [key]: { loading: true, data: null, error: null } }));
     try {
-      const data = await fetchFn(backendState.data, backendState.feedback);
+      const data = await fetchFn();
       localStorage.setItem(cacheKey, JSON.stringify(data));
       setSections(prev => ({ ...prev, [key]: { loading: false, data, error: null } }));
     } catch (e) {
@@ -113,7 +105,7 @@ export default function InsightsPage() {
   }
 
   function retrySection(key) {
-    localStorage.removeItem(`gemini-${key}-v${t.videoId}`);
+    localStorage.removeItem(`ai-${key}-${t.startAt}`);
     setSections(prev => ({ ...prev, [key]: emptySection() }));
   }
 
@@ -153,17 +145,11 @@ export default function InsightsPage() {
 
   const backendLoading = backendState.videoId !== t.videoId;
   const videoData = backendState.data;
-  const feedback = backendState.feedback;
   const anyLoading = Object.values(sections).some(s => s.loading);
-  const aiSummary = sections.summary.data?.summary ?? "";
+  const summaryText = sections.summary.data?.message ?? "";
   const aiInsights = sections.insights.data?.insights ?? [];
   const aiActions = sections.actions.data?.actions ?? [];
-  const aiStrategies = sections.strategies.data?.strategies ?? [];
-  const activeStratTab = aiStrategies.find((s) => s.id === stratTab)
-    ? stratTab
-    : (aiStrategies[0]?.id ?? null);
-  const activeStratItems =
-    aiStrategies.find((s) => s.id === activeStratTab)?.items ?? [];
+  const strategyInsights = sections.strategies.data?.insights ?? [];
 
   const persons = videoData?.persons ?? [];
   const womanCount = persons.filter(p => p.gender === 'female').length;
@@ -319,7 +305,7 @@ export default function InsightsPage() {
                       color: "oklch(0.22 0.03 255)",
                     }}
                   >
-                    {aiSummary}
+                    {summaryText}
                   </p>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -327,17 +313,16 @@ export default function InsightsPage() {
                       매장 데이터를 기반으로 AI 요약을 생성합니다.
                     </p>
                     <button
-                      onClick={() => runSection("summary", generateSummary)}
-                      disabled={backendLoading}
+                      onClick={() => runSection("summary", () => aiSummary(t.startAt, t.endAt))}
                       style={{
                         padding: "6px 16px",
                         borderRadius: 999,
                         fontSize: 12,
                         fontWeight: 600,
                         border: "none",
-                        background: backendLoading ? "var(--line)" : "oklch(0.50 0.16 265)",
-                        color: backendLoading ? "var(--muted)" : "#fff",
-                        cursor: backendLoading ? "default" : "pointer",
+                        background: "oklch(0.50 0.16 265)",
+                        color: "#fff",
+                        cursor: "pointer",
                         flexShrink: 0,
                       }}
                     >
@@ -393,9 +378,9 @@ export default function InsightsPage() {
                 <button
                   onClick={() => sections.insights.data
                     ? retrySection("insights")
-                    : runSection("insights", generateInsightCards)
+                    : runSection("insights", () => aiInsightCards(t.startAt, t.endAt))
                   }
-                  disabled={sections.insights.loading || backendLoading}
+                  disabled={sections.insights.loading}
                   style={{
                     padding: "4px 12px",
                     borderRadius: 999,
@@ -405,8 +390,8 @@ export default function InsightsPage() {
                     borderColor: sections.insights.data ? "var(--line)" : "var(--accent)",
                     background: sections.insights.data ? "#fff" : "var(--accent)",
                     color: sections.insights.data ? "var(--muted)" : "#fff",
-                    cursor: sections.insights.loading || backendLoading ? "default" : "pointer",
-                    opacity: sections.insights.loading || backendLoading ? 0.5 : 1,
+                    cursor: sections.insights.loading ? "default" : "pointer",
+                    opacity: sections.insights.loading ? 0.5 : 1,
                   }}
                 >
                   {sections.insights.loading ? "생성 중..." : sections.insights.data ? "재생성" : "생성"}
@@ -460,7 +445,7 @@ export default function InsightsPage() {
                   ))
                 ) : aiInsights.length > 0 ? (
                   aiInsights.map((ins, i) => {
-                    const meta = TYPE_META[ins.type] ?? TYPE_META.trend;
+                    const meta = TYPE_META[ins.type?.toLowerCase()] ?? TYPE_META.trend;
                     return (
                       <div
                         key={i}
@@ -568,9 +553,9 @@ export default function InsightsPage() {
                   <button
                     onClick={() => sections.actions.data
                       ? retrySection("actions")
-                      : runSection("actions", generateActions)
+                      : runSection("actions", () => aiActions(t.startAt, t.endAt))
                     }
-                    disabled={sections.actions.loading || backendLoading}
+                    disabled={sections.actions.loading}
                     style={{
                       marginLeft: "auto",
                       padding: "4px 12px",
@@ -581,8 +566,8 @@ export default function InsightsPage() {
                       borderColor: sections.actions.data ? "var(--line)" : "var(--accent)",
                       background: sections.actions.data ? "#fff" : "var(--accent)",
                       color: sections.actions.data ? "var(--muted)" : "#fff",
-                      cursor: sections.actions.loading || backendLoading ? "default" : "pointer",
-                      opacity: sections.actions.loading || backendLoading ? 0.5 : 1,
+                      cursor: sections.actions.loading ? "default" : "pointer",
+                      opacity: sections.actions.loading ? 0.5 : 1,
                     }}
                   >
                     {sections.actions.loading ? "생성 중..." : sections.actions.data ? "재생성" : "생성"}
@@ -705,9 +690,9 @@ export default function InsightsPage() {
               <button
                 onClick={() => sections.strategies.data
                   ? retrySection("strategies")
-                  : runSection("strategies", generateStrategies)
+                  : runSection("strategies", () => aiStrategies(t.startAt, t.endAt))
                 }
-                disabled={sections.strategies.loading || backendLoading}
+                disabled={sections.strategies.loading}
                 style={{
                   marginLeft: "auto",
                   padding: "4px 12px",
@@ -718,167 +703,52 @@ export default function InsightsPage() {
                   borderColor: sections.strategies.data ? "var(--line)" : "var(--accent)",
                   background: sections.strategies.data ? "#fff" : "var(--accent)",
                   color: sections.strategies.data ? "var(--muted)" : "#fff",
-                  cursor: sections.strategies.loading || backendLoading ? "default" : "pointer",
-                  opacity: sections.strategies.loading || backendLoading ? 0.5 : 1,
+                  cursor: sections.strategies.loading ? "default" : "pointer",
+                  opacity: sections.strategies.loading ? 0.5 : 1,
                 }}
               >
                 {sections.strategies.loading ? "생성 중..." : sections.strategies.data ? "재생성" : "생성"}
               </button>
             </div>
-            <div
-              className="card-b"
-              style={{ display: "flex", flexDirection: "column", gap: 16 }}
-            >
+            <div className="card-b">
               {sections.strategies.loading ? (
-                <>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {[80, 70, 85, 75].map((w, i) => (
-                      <SkeletonBlock
-                        key={i}
-                        height={30}
-                        width={w}
-                        radius={999}
-                      />
-                    ))}
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(220px, 1fr))",
-                      gap: 12,
-                    }}
-                  >
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        style={{
-                          padding: "14px 15px",
-                          borderRadius: 11,
-                          border: "1px solid var(--line)",
-                          background: "#FAFBFD",
-                        }}
-                      >
-                        <SkeletonBlock
-                          height={13}
-                          width="80%"
-                          style={{ marginBottom: 10 }}
-                        />
-                        <SkeletonBlock
-                          height={11}
-                          width="100%"
-                          style={{ marginBottom: 6 }}
-                        />
-                        <SkeletonBlock height={11} width="70%" />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} style={{ borderRadius: 12, border: "1px solid var(--line)", background: "#fff", overflow: "hidden" }}>
+                      <div style={{ height: 3, background: "#E5E8EE" }} />
+                      <div style={{ padding: "14px 15px", display: "flex", flexDirection: "column", gap: 10 }}>
+                        <SkeletonBlock height={20} width={60} radius={999} />
+                        <SkeletonBlock height={14} width="80%" />
+                        <SkeletonBlock height={12} width="100%" />
+                        <SkeletonBlock height={10} width="70%" radius={6} />
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : aiStrategies.length > 0 ? (
-                <>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {aiStrategies.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setStratTab(tab.id)}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 999,
-                          fontSize: 12.5,
-                          fontWeight: 600,
-                          border: "1px solid",
-                          borderColor:
-                            activeStratTab === tab.id
-                              ? "var(--accent)"
-                              : "var(--line)",
-                          background:
-                            activeStratTab === tab.id
-                              ? "var(--accent)"
-                              : "#fff",
-                          color:
-                            activeStratTab === tab.id ? "#fff" : "var(--muted)",
-                          cursor: "default",
-                          transition: "background 0.12s, color 0.12s",
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(220px, 1fr))",
-                      gap: 12,
-                    }}
-                  >
-                    {activeStratItems.map((s, i) => {
-                      const tagMeta = TAG_META[s.tag] || {
-                        color: "var(--muted)",
-                        bg: "#F7F9FC",
-                      };
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            padding: "14px 15px",
-                            borderRadius: 11,
-                            border: "1px solid var(--line)",
-                            background: "#FAFBFD",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "flex-start",
-                              marginBottom: 8,
-                              gap: 8,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                fontSize: 13,
-                                color: "var(--ink)",
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {s.title}
-                            </div>
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                padding: "2px 7px",
-                                borderRadius: 999,
-                                background: tagMeta.bg,
-                                color: tagMeta.color,
-                                flexShrink: 0,
-                              }}
-                            >
-                              {s.tag}
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: "var(--muted)",
-                              lineHeight: 1.6,
-                            }}
-                          >
-                            {s.desc}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                  전략 데이터가 없습니다.
+                    </div>
+                  ))}
                 </div>
+              ) : strategyInsights.length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {strategyInsights.map((ins, i) => {
+                    const meta = TYPE_META[ins.type?.toLowerCase()] ?? TYPE_META.trend;
+                    return (
+                      <div key={i} style={{ borderRadius: 12, border: "1px solid var(--line)", background: "#fff", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-sm)" }}>
+                        <div style={{ height: 3, background: meta.bar }} />
+                        <div style={{ padding: "14px 15px", display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                          <span style={{ alignSelf: "flex-start", fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: meta.bg, color: meta.color }}>
+                            {meta.label}
+                          </span>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, lineHeight: 1.35, color: "var(--ink)" }}>{ins.title}</div>
+                          <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.55, flex: 1 }}>{ins.desc}</div>
+                          <div style={{ padding: "7px 9px", background: "#F7F9FC", borderRadius: 8, fontSize: 11, color: "var(--muted-2)" }}>
+                            <span style={{ fontWeight: 600, color: "var(--muted)" }}>근거 · </span>{ins.data}
+                          </div>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, color: meta.color }}>→ {ins.action}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: "var(--muted)" }}>전략 데이터가 없습니다.</div>
               )}
             </div>
           </div>
@@ -956,7 +826,7 @@ export default function InsightsPage() {
         </div>
       </div>
 
-      <ChatPanel videoData={videoData} feedback={feedback} />
+      <ChatPanel videoId={t.videoId} videoData={videoData} />
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="데이터" />

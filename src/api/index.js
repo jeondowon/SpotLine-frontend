@@ -72,3 +72,45 @@ export async function fetchDailyBriefing() {
 export async function fetchMarketingRecommendations() {
   return post('/api/v1/analytics/marketing-recommendations')
 }
+
+// AI
+export async function aiSummary(startAt, endAt) {
+  return post('/api/v1/ai/summury', { startAt, endAt })
+}
+
+export async function aiInsightCards(startAt, endAt) {
+  return post('/api/v1/ai/insight-card', { startAt, endAt })
+}
+
+export async function aiStrategies(startAt, endAt) {
+  return post('/api/v1/ai/strategies', { startAt, endAt })
+}
+
+export async function aiActions(startAt, endAt) {
+  return post('/api/v1/ai/actions', { startAt, endAt })
+}
+
+export async function* aiChat(videoId, messages) {
+  const res = await fetch(`${BASE}/api/v1/ai/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ videoId, messages }),
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const data = line.slice(6).trim()
+      if (!data || data === '[DONE]') continue
+      try { yield JSON.parse(data).chunk } catch { /* skip */ }
+    }
+  }
+}

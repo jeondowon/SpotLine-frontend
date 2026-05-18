@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Ic } from '../ui/Icons'
-import { buildSystemPrompt, streamChat } from '../../api/gemini'
+import { aiChat } from '../../api/index'
 
-export default function ChatPanel({ videoData, feedback }) {
+export default function ChatPanel({ videoId, videoData }) {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -41,19 +41,12 @@ export default function ChatPanel({ videoData, feedback }) {
     setMessages(history)
     setStreaming(true)
 
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ VITE_GEMINI_API_KEY가 .env에 설정되지 않았습니다.' }])
-      setStreaming(false)
-      return
-    }
-
     const controller = new AbortController()
     abortRef.current = controller
-    const systemPrompt = buildSystemPrompt(videoData, feedback)
 
     try {
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-      for await (const chunk of streamChat(history, systemPrompt)) {
+      for await (const chunk of aiChat(videoId, history)) {
         if (controller.signal.aborted) break
         setMessages(prev => {
           const last = prev[prev.length - 1]
