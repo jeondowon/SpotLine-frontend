@@ -195,6 +195,8 @@ export default function SettingsPage() {
   }, [t.accent])
 
   // 매장 프로필
+  const [storeName,    setStoreName]    = useState(() => localStorage.getItem('store_name')    ?? '스팟라인 홍대점')
+  const [storeAddress, setStoreAddress] = useState(() => localStorage.getItem('store_address') ?? '서울시 마포구 홍익로 15')
   const [bizType, setBizType] = useState('카페')
   const [closedDays, setClosedDays] = useState(['일'])
 
@@ -238,11 +240,11 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8F9FB' }}>
+    <div className="app">
       <Sidebar/>
 
-      <main style={{
-        flex: 1, padding: t.density === 'compact' ? '24px' : '32px',
+      <main className="main" style={{
+        padding: t.density === 'compact' ? '24px' : '32px',
         display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800,
       }}>
         {/* header */}
@@ -257,7 +259,8 @@ export default function SettingsPage() {
         <SectionCard title="매장 프로필" icon={<Ic.Door color="#6B7280"/>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <FieldRow label="매장명">
-              <TextInput defaultValue="스팟라인 홍대점"/>
+              <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
+                style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
             </FieldRow>
             <FieldRow label="업종">
               <select value={bizType} onChange={e => setBizType(e.target.value)} style={{
@@ -271,7 +274,8 @@ export default function SettingsPage() {
               </select>
             </FieldRow>
             <FieldRow label="주소">
-              <TextInput defaultValue="서울시 마포구 홍익로 15" placeholder="주소 입력"/>
+              <input type="text" value={storeAddress} onChange={e => setStoreAddress(e.target.value)} placeholder="주소 입력"
+                style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
             </FieldRow>
             <FieldRow label="영업시간">
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -298,7 +302,10 @@ export default function SettingsPage() {
             </FieldRow>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button style={{
+            <button onClick={() => {
+              localStorage.setItem('store_name', storeName)
+              localStorage.setItem('store_address', storeAddress)
+            }} style={{
               height: 36, padding: '0 20px', borderRadius: 8, border: 'none',
               background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
@@ -307,7 +314,7 @@ export default function SettingsPage() {
         </SectionCard>
 
         {/* 2. 분석 구역 설정 */}
-        <SectionCard title="분석 구역 설정" icon={<Ic.Chart color="#6B7280"/>}>
+        {/* <SectionCard title="분석 구역 설정" icon={<Ic.Chart color="#6B7280"/>}>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 300px' }}>
               <FloorPlan/>
@@ -363,10 +370,10 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* 3. 혼잡도 기준 */}
-        <SectionCard title="혼잡도 기준 설정" icon={<Ic.Spark color="#6B7280"/>}>
+        {/* <SectionCard title="혼잡도 기준 설정" icon={<Ic.Spark color="#6B7280"/>}>
           <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
             동시 체류 인원 기준으로 혼잡도 단계를 조정합니다.
           </p>
@@ -376,10 +383,10 @@ export default function SettingsPage() {
               if (l <= h) { setThreshLow(l); setThreshHigh(h) }
             }}
           />
-        </SectionCard>
+        </SectionCard> */}
 
         {/* 4. 데이터 및 개인정보 */}
-        <SectionCard title="데이터 및 개인정보 설정" icon={<Ic.Report color="#6B7280"/>}>
+        {/* <SectionCard title="데이터 및 개인정보 설정" icon={<Ic.Report color="#6B7280"/>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {[
               {
@@ -438,10 +445,10 @@ export default function SettingsPage() {
               개인 식별·얼굴 인식 기능은 비활성화되어 있습니다.
             </p>
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* 5. 외부 데이터 연동 */}
-        <SectionCard title="외부 데이터 연동" icon={<Ic.Gear color="#6B7280"/>}>
+        {/* <SectionCard title="외부 데이터 연동" icon={<Ic.Gear color="#6B7280"/>}>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 16px', borderRadius: 10, border: '1px solid #E5E9EF', background: '#FAFAFA',
@@ -472,10 +479,10 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* 6. 시스템 상태 */}
-        <SectionCard title="시스템 상태" icon={<Ic.Dash color="#6B7280"/>}>
+        {/* <SectionCard title="시스템 상태" icon={<Ic.Dash color="#6B7280"/>}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {SYS_ITEMS.map(item => (
               <div key={item.label} style={{
@@ -490,10 +497,10 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* 7. 계정 설정 */}
-        <SectionCard title="계정 설정" icon={<Ic.Chevron color="#6B7280"/>}>
+        {/* <SectionCard title="계정 설정" icon={<Ic.Chevron color="#6B7280"/>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <FieldRow label="이름">
               <TextInput defaultValue="박지원"/>
@@ -541,10 +548,10 @@ export default function SettingsPage() {
               cursor: 'pointer', fontFamily: 'inherit',
             }}>저장</button>
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* footer */}
-        <div style={{
+        {/* <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '16px 0',
           borderTop: '1px solid #E5E9EF',
         }}>
@@ -552,10 +559,10 @@ export default function SettingsPage() {
           <span style={{ fontSize: 12, color: '#9AA3AF' }}>
             Spotline v2.4.1 · 프라이버시 보호 분석 · 영상 저장 없음 · 얼굴 인식 없음
           </span>
-        </div>
+        </div> */}
       </main>
 
-      <TweaksPanel title="설정 페이지 Tweaks">
+      {/* <TweaksPanel title="설정 페이지 Tweaks">
         <TweakSection label="테마">
           <TweakColor label="accent" value={t.accent}
             options={['#3B7CF6','#7C3BF6','#F63B7C','#3BF67C','#F6A83B']}
@@ -570,7 +577,7 @@ export default function SettingsPage() {
           <TweakToggle label="낮음/보통 경계 리셋" value={false}
             onChange={() => { setThreshLow(10); setThreshHigh(25) }}/>
         </TweakSection>
-      </TweaksPanel>
+      </TweaksPanel> */}
     </div>
   )
 }

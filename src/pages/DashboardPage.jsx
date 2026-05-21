@@ -1,382 +1,544 @@
-import { useEffect, useState } from 'react'
-import Sidebar from '../components/layout/Sidebar'
-import Header from '../components/dashboard/Header'
-import TrafficChart from '../components/dashboard/TrafficChart'
-import Gauge from '../components/dashboard/Gauge'
-import KPI from '../components/ui/KPI'
-import { Ic } from '../components/ui/Icons'
-import { TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakToggle, TweakNumber } from '../components/ui/TweaksPanel'
-import { useTweaks } from '../hooks/useTweaks'
-import { fetchRawAnalytics, fetchDailyBriefing, fetchMarketingRecommendations } from '../api/index'
+import { useEffect, useState } from "react";
+import Sidebar from "../components/layout/Sidebar";
+import Header from "../components/dashboard/Header";
+import TrendChart from "../components/dashboard/TrendChart";
+import KPI from "../components/ui/KPI";
+import { Ic } from "../components/ui/Icons";
+import CoreCustomerProfile from "../components/dashboard/CoreCustomerProfile";
+import TimeDemographics from "../components/dashboard/TimeDemographics";
+import WeatherPerformance from "../components/dashboard/WeatherPerformance";
+import WeekdayAnomaly from "../components/dashboard/WeekdayAnomaly";
+import PredictionDetail from "../components/dashboard/PredictionDetail";
+import Heatmap from "../components/analytics/charts/Heatmap";
+import "../styles/analytics.css";
+import {
+  TweaksPanel,
+  TweakSection,
+  TweakColor,
+  TweakToggle,
+  TweakNumber,
+} from "../components/ui/TweaksPanel";
+import { useTweaks } from "../hooks/useTweaks";
+import {
+  fetchCoreCustomers,
+  fetchHourlyPopulation,
+  fetchWeatherImpact,
+  fetchWeekdayPatterns,
+  fetchVisitCount,
+  fetchTomorrowPrediction,
+  fetchNextWeekPrediction,
+  fetchDailyBriefing,
+  fetchRawAnalytics,
+  fetchMarketingRecommendations,
+} from "../api/index";
 
 const TWEAK_DEFAULTS = {
-  accent: '#3B7CF6',
-  videoId: 1,
-  chartStyle: 'area',
-  showAiPanel: true,
+  accent: "#3B7CF6",
+  rain: 0,
+  temp: 20,
   showPrivacyBadge: true,
+};
+
+const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
+
+const AGE_KEYS = [
+  { key: "age10s", label: "10대" },
+  { key: "age20s", label: "20대" },
+  { key: "age30s", label: "30대" },
+  { key: "age40s", label: "40대" },
+  { key: "age50s", label: "50대+" },
+];
+
+function todayRange() {
+  const now = new Date();
+  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (d) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return {
+    startAt: fmt(s),
+    endAt: fmt(now),
+    day: fmt(s),
+    dayOfWeek: (now.getDay() + 6) % 7,
+  };
 }
 
-const CONGESTION_LEVEL = { low: 20, medium: 50, high: 80 }
-
-const AGE_GROUP_KEYS = [
-  { label: '20–29', keys: ['20s'] },
-  { label: '30–39', keys: ['30s'] },
-  { label: '40–49', keys: ['40s'] },
-  { label: '50대+', keys: ['50s', '60s', '70s', '80s'] },
-  { label: '기타',  keys: ['0s', '10s'] },
-]
-
-function formatDwellTime(seconds) {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m}분 ${String(s).padStart(2, '0')}초`
+function formatDwell(sec) {
+  if (!sec) return "—";
+  if (sec < 60) return `${Math.round(sec)}초`;
+  return `${Math.floor(sec / 60)}분 ${Math.round(sec % 60)}초`;
 }
 
-function congestionLabel(level) {
-  if (level < 34) return '여유'
-  if (level < 67) return '보통'
-  return '혼잡'
+function genderLabel(g) {
+  if (g === "MAN") return "남성";
+  if (g === "WOMAN") return "여성";
+  return "—";
 }
 
-function computeAgeGroups(persons) {
-  if (!persons?.length) return []
-  const counts = {}
-  for (const p of persons) counts[p.age_group] = (counts[p.age_group] ?? 0) + 1
-  return AGE_GROUP_KEYS.map(({ label, keys }) => {
-    const count = keys.reduce((sum, k) => sum + (counts[k] ?? 0), 0)
-    return { label, count, pct: Math.round((count / persons.length) * 100) }
-  })
+function ageLabel(a) {
+  if (!a) return "—";
+  return a.replace("s", "대");
+}
+
+function resultMeta(r) {
+  if (r === "GOOD")
+    return {
+      text: "선방",
+      iconBg: "var(--good-soft)",
+      iconFg: "oklch(0.42 0.12 155)",
+    };
+  if (r === "BAD")
+    return {
+      text: "부진",
+      iconBg: "var(--bad-soft)",
+      iconFg: "oklch(0.45 0.16 25)",
+    };
+  return {
+    text: "보통",
+    iconBg: "var(--warn-soft)",
+    iconFg: "oklch(0.55 0.14 65)",
+  };
 }
 
 export default function DashboardPage() {
-  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [state, setState] = useState({ data: {}, loading: true });
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const [marketingLoading, setMarketingLoading] = useState(false);
 
-  const [fetchState, setFetchState] = useState({ videoId: null, raw: null, briefing: null, marketing: null, error: null })
+  const today = new Date();
+  const dateLabel = today.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent', t.accent)
-  }, [t.accent])
+    document.documentElement.style.setProperty("--accent", t.accent);
+  }, [t.accent]);
 
   useEffect(() => {
-    let cancelled = false
-    Promise.all([fetchRawAnalytics(t.videoId), fetchDailyBriefing(), fetchMarketingRecommendations()])
-      .then(([raw, briefing, marketing]) => {
-        if (!cancelled) setFetchState({ videoId: t.videoId, raw, briefing, marketing, error: null })
-      })
-      .catch(e => {
-        if (!cancelled) setFetchState({ videoId: t.videoId, raw: null, briefing: null, marketing: null, error: e.message })
-      })
-    return () => { cancelled = true }
-  }, [t.videoId])
+    const { startAt, endAt, day, dayOfWeek } = todayRange();
+    const videoId = localStorage.getItem("last_video_id");
+    Promise.allSettled([
+      fetchCoreCustomers(startAt, endAt),
+      fetchHourlyPopulation(startAt, endAt),
+      fetchWeatherImpact(day, t.rain, t.temp),
+      fetchWeekdayPatterns(day, dayOfWeek),
+      fetchVisitCount(startAt, endAt),
+      fetchTomorrowPrediction(),
+      fetchNextWeekPrediction(),
+      videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
+    ]).then(
+      ([
+        core,
+        hourly,
+        weather,
+        weekday,
+        visits,
+        tomorrow,
+        nextWeek,
+        raw,
+      ]) => {
+        setState({
+          loading: false,
+          data: {
+            core: core.status === "fulfilled" ? core.value : null,
+            hourly: hourly.status === "fulfilled" ? hourly.value : null,
+            weather: weather.status === "fulfilled" ? weather.value : null,
+            weekday: weekday.status === "fulfilled" ? weekday.value : null,
+            visits: visits.status === "fulfilled" ? visits.value : null,
+            tomorrow: tomorrow.status === "fulfilled" ? tomorrow.value : null,
+            nextWeek: nextWeek.status === "fulfilled" ? nextWeek.value : null,
+            raw: raw.status === "fulfilled" ? raw.value : null,
+          },
+        });
+      },
+    );
+  }, [t.rain, t.temp]);
 
-  const loading    = fetchState.videoId !== t.videoId
-  const raw        = fetchState.raw
-  const briefing   = fetchState.briefing
-  const marketing  = fetchState.marketing
-  const apiError   = fetchState.error
+  const { data, loading } = state;
+  const {
+    core,
+    hourly,
+    weather,
+    weekday,
+    visits,
+    tomorrow,
+    nextWeek,
+    raw,
+  } = data;
 
-  const persons      = raw?.persons ?? []
-  const visitorCount = raw?.summary?.total_visitors ?? 0
-  const congestion   = CONGESTION_LEVEL[raw?.summary?.peak_congestion] ?? 0
-  const dwellSecs    = raw?.summary?.avg_dwell_time_seconds ?? 0
-  const dwellDisplay = dwellSecs ? formatDwellTime(Math.round(dwellSecs)) : '—'
-  const entry        = persons.filter(p => p.entrance_event).length
-  const manCount     = persons.filter(p => p.gender === 'male').length
-  const womanCount   = persons.filter(p => p.gender === 'female').length
-  const genderTotal  = manCount + womanCount
-  const femPct       = genderTotal > 0 ? Math.round((womanCount / genderTotal) * 100) : 50
-  const malePct      = 100 - femPct
-  const ageGroups    = computeAgeGroups(persons)
+  const [briefing, setBriefing] = useState(null);
+  const [marketing, setMarketing] = useState(null);
+
+  const generateBriefing = async () => {
+    setBriefingLoading(true);
+    try {
+      const result = await fetchDailyBriefing();
+      setBriefing(result);
+    } catch {
+      /* 실패 시 무시 */
+    } finally {
+      setBriefingLoading(false);
+    }
+  };
+
+  const generateMarketing = async () => {
+    setMarketingLoading(true);
+    try {
+      const result = await fetchMarketingRecommendations();
+      setMarketing(result);
+    } catch {
+      /* 실패 시 무시 */
+    } finally {
+      setMarketingLoading(false);
+    }
+  };
+
+  const weatherMeta = resultMeta(weather?.result);
+
+  const coreLabel = core
+    ? `${ageLabel(core.age)} ${genderLabel(core.gender)}`
+    : "—";
+
+  const ageGroups = AGE_KEYS.map(({ key, label }) => ({
+    label,
+    pct: hourly?.[key] ?? 0,
+  }));
+
+  const nextWeekArr = (nextWeek?.result ?? []).map((v) =>
+    typeof v === "object" ? (v?.expectedVisits ?? 0) : v
+  );
+  const maxNextWeek = Math.max(...nextWeekArr, 1);
 
   return (
     <div className="app">
-      <Sidebar/>
+      <Sidebar />
       <div className="main">
-        <Header storeName={`비디오 #${t.videoId} 분석`}/>
+        <Header />
 
         <div className="content">
-
-          {apiError && (
-            <div style={{
-              padding: '12px 16px', marginBottom: 8, borderRadius: 10,
-              background: '#FEF2F2', border: '1px solid #FECACA',
-              fontSize: 13, color: '#DC2626',
-            }}>
-              데이터를 불러오지 못했습니다: {apiError}
+          <div>
+            <div
+              style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}
+            >
+              {dateLabel}
             </div>
-          )}
-
-          <div className="row-greet">
-            <div className="greet">
-              <h1>
-                {loading
-                  ? '데이터를 불러오는 중입니다...'
-                  : `오늘 매장 현황을 한눈에 보여드릴게요.`}
-              </h1>
-              <p>
-                {loading
-                  ? '잠시만 기다려 주세요.'
-                  : `총 방문자 ${visitorCount}명 · 혼잡도 ${congestionLabel(congestion)} · 평균 체류 ${dwellDisplay}`}
-              </p>
+            <div className="row-greet" style={{ marginTop: 4 }}>
+              <div className="greet">
+                <h1>
+                  {loading
+                    ? "데이터를 불러오는 중입니다..."
+                    : "오늘 매장 인사이트를 확인하세요."}
+                </h1>
+              </div>
             </div>
-            <span className="live-pill"><span className="live-dot"/>실시간 업데이트 중</span>
           </div>
 
+          {/* KPI 4개 */}
           <div className="kpis">
-            <KPI label="오늘 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
-                 value={visitorCount.toLocaleString()} unit="명"
-                 hint="실시간 데이터"/>
-            <KPI label="현재 혼잡도" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
-                 value={congestion} unit="/ 100"
-                 hint="실시간 데이터"/>
-            <KPI label="평균 체류 시간" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
-                 value={dwellDisplay}
-                 hint="실시간 데이터"/>
-            <KPI label="입장 이벤트" icon={<Ic.Door/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
-                 value={entry} unit="건"
-                 hint="오늘 누적"/>
+            <KPI
+              label="오늘 방문자"
+              icon={<Ic.Users />}
+              iconBg="oklch(0.95 0.03 250)"
+              iconFg="oklch(0.48 0.16 250)"
+              value={raw?.summary?.total_visitors ?? "—"}
+              unit={raw ? "명" : ""}
+              hint="분석된 영상 기준"
+            />
+            <KPI
+              label="핵심 고객"
+              icon={<Ic.Users />}
+              iconBg="oklch(0.95 0.03 250)"
+              iconFg="oklch(0.48 0.16 250)"
+              value={coreLabel}
+              hint="오늘 최다 방문 그룹"
+            />
+            <KPI
+              label="오늘 평균 체류"
+              icon={<Ic.Clock />}
+              iconBg="oklch(0.95 0.04 155)"
+              iconFg="oklch(0.42 0.12 155)"
+              value={formatDwell(raw?.summary?.avg_dwell_time_seconds)}
+              hint="분석된 영상 기준"
+            />
+            <KPI
+              label="날씨 보정 성과"
+              icon={<Ic.Cloud />}
+              iconBg={weatherMeta.iconBg}
+              iconFg={weatherMeta.iconFg}
+              value={
+                weather
+                  ? `${Math.round((weather.realValue / weather.expectValue) * 100)}%`
+                  : "—"
+              }
+              hint={
+                weather
+                  ? `${weatherMeta.text} · 기대 ${weather.expectValue}명 대비`
+                  : "날씨 영향 보정 후"
+              }
+            />
           </div>
 
-          <div className="compare">
-            <div>
-              <div className="l">입구 존 진입</div>
-              <div className="v mono">{entry}건</div>
-              <div className="d" style={{color:'#6B7280'}}>오늘 누적</div>
-            </div>
-            <div>
-              <div className="l">방문자 수</div>
-              <div className="v mono">{visitorCount}명</div>
-              <div className="d" style={{color:'#6B7280'}}>오늘 누적</div>
-            </div>
-            <div>
-              <div className="l">성별 비율</div>
-              <div className="v mono">여 {femPct}% · 남 {malePct}%</div>
-              <div className="d" style={{color:'#6B7280'}}>익명 추정</div>
-            </div>
-            <div>
-              <div className="l">혼잡도</div>
-              <div className="v mono">{congestionLabel(congestion)}</div>
-              <div className="d" style={{color:'#6B7280'}}>현재 상태</div>
-            </div>
-          </div>
-
+          {/* 기능 5·7: 방문 추세선 + 일일 브리핑 */}
           <div className="grid-main">
             <div className="card">
               <div className="card-h">
-                <h3>오늘 시간대별 방문자</h3>
-                <span className="sub">· 09시 ~ 22시</span>
+                <h3>방문 추세선</h3>
+                <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
                 <div className="right">
-                  <span className="chip dot">방문자</span>
-                  <span className="chip">어제 비교</span>
-                  <span className="chip">시간당</span>
+                  <span className="chip dot">날씨 보정값</span>
                 </div>
               </div>
-              <div className="card-b" style={{padding: "8px 12px 14px"}}>
-                <TrafficChart style={t.chartStyle}/>
+              <div className="card-b" style={{ padding: "8px 12px 14px" }}>
+                <TrendChart data={visits} />
               </div>
             </div>
 
             <div className="card">
               <div className="card-h">
-                <h3>매장 상태</h3>
-                <div className="right"><span className="chip">실시간</span></div>
+                <span className="ai-h-badge">
+                  <Ic.Sparkle /> 일일 브리핑
+                </span>
+                <div className="right">
+                  <span className="chip">AI</span>
+                  <button
+                    className="gen-btn"
+                    onClick={generateBriefing}
+                    disabled={briefingLoading}
+                  >
+                    {briefingLoading ? "생성 중..." : "생성하기"}
+                  </button>
+                </div>
               </div>
-              <div className="card-b status-grid">
-                <div className="gauge-wrap">
-                  <Gauge value={congestion}/>
-                  <div className="gauge-meta">
-                    <div className="lvl">{congestionLabel(congestion)}<span className="small">혼잡도</span></div>
-                    <div className="desc">
-                      {congestion < 34 && '매장이 여유로운 상태입니다. 고객 응대에 집중하세요.'}
-                      {congestion >= 34 && congestion < 67 && '평소 수준의 혼잡도입니다. 상황을 주시하세요.'}
-                      {congestion >= 67 && '혼잡도가 높습니다. 직원 추가 배치를 고려해보세요.'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="status-rows">
-                  <div className="status-row"><span className="k">방문자 수</span><span className="v mono">{visitorCount}명</span></div>
-                  <div className="status-row"><span className="k">남성 방문자</span><span className="v mono">{manCount}명</span></div>
-                  <div className="status-row"><span className="k">여성 방문자</span><span className="v mono">{womanCount}명</span></div>
-                  <div className="status-row"><span className="k">입구 이벤트</span><span className="v mono">{entry}건</span></div>
-                </div>
+              <div className="card-b">
+                {briefing?.message ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13.5,
+                      lineHeight: 1.75,
+                      color: "var(--ink-2)",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {briefing.message}
+                  </p>
+                ) : (
+                  <p
+                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
+                  >
+                    {briefingLoading ? "생성 중..." : "생성하기 버튼을 눌러 AI 브리핑을 받아보세요."}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
+          {/* 기능 2·6·8: 연령대 분포 + 다음 주 예측 + 마케팅 추천 */}
           <div className="grid-second">
             <div className="card">
               <div className="card-h">
-                <h3>존(Zone) 진입 이벤트</h3>
-                <span className="sub">· 오늘 누적</span>
-              </div>
-              <div className="card-b">
-                <div className="zone-row">
-                  <div className="zone-ic" style={{background:"oklch(0.95 0.03 250)", color:"oklch(0.48 0.16 250)"}}><Ic.Door/></div>
-                  <div>
-                    <div className="zone-name">입구 존</div>
-                    <div className="zone-sub">방문자 진입 이벤트</div>
-                  </div>
-                  <div className="zone-val">
-                    <div className="n mono">{entry}</div>
-                    <div className="d">건</div>
-                  </div>
-                  <div className="zone-bar"><div style={{width:"100%", background:"oklch(0.62 0.14 250)"}}/></div>
-                </div>
-              </div>
-            </div>
-
-            {t.showAiPanel && (
-              <div className="card">
-                <div className="card-h">
-                  <span className="ai-h-badge"><Ic.Sparkle/> AI 인사이트</span>
-                  <span className="sub">비디오 #{t.videoId} 기반</span>
-                  <div className="right"><span className="chip">베타</span></div>
-                </div>
-                <div className="card-b ai-list">
-                  {briefing?.message && (
-                    <div className="ai-card">
-                      <div className="num">01</div>
-                      <div>
-                        <div className="t">일일 브리핑</div>
-                        <div className="b">{briefing.message}</div>
-                        <span className="tag">AI 분석</span>
-                      </div>
-                    </div>
-                  )}
-                  {marketing?.message && (
-                    <div className="ai-card">
-                      <div className="num">02</div>
-                      <div>
-                        <div className="t">마케팅 추천</div>
-                        <div className="b">{marketing.message}</div>
-                        <span className="tag k">마케팅</span>
-                      </div>
-                    </div>
-                  )}
-                  {!briefing && !marketing && !loading && (
-                    <div style={{fontSize: 13, color: '#9AA3AF', padding: '8px 0'}}>
-                      브리핑 데이터가 없습니다.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="grid-second" style={{gridTemplateColumns:"1.4fr 1fr 1fr"}}>
-            <div className="card">
-              <div className="card-h">
-                <h3>주요 방문 연령대</h3>
-                <span className="sub">· AI 추정 · 익명 통계</span>
-                <div className="right"><span className="chip">오늘</span></div>
+                <h3>오늘 연령대 분포</h3>
+                <span className="sub">· 시간대별 인구통계</span>
               </div>
               <div className="card-b">
                 <div className="ages">
-                  {ageGroups.length > 0
-                    ? ageGroups.map((a) => (
-                        <div className="age-row" key={a.label}>
-                          <div className="l mono">{a.label}</div>
-                          <div className="track"><div className="fill" style={{width: a.pct + "%"}}/></div>
-                          <div className="v mono">{a.pct}%</div>
-                        </div>
-                      ))
-                    : <div style={{fontSize: 13, color: '#9AA3AF'}}>연령 데이터 없음</div>
-                  }
+                  {ageGroups.map((a) => (
+                    <div className="age-row" key={a.label}>
+                      <div className="l mono">{a.label}</div>
+                      <div className="track">
+                        <div className="fill" style={{ width: a.pct + "%" }} />
+                      </div>
+                      <div className="v mono">{a.pct}%</div>
+                    </div>
+                  ))}
                 </div>
-                <div className="priv" style={{marginTop: 14, fontSize: 11.5}}>
-                  <Ic.Shield color="#9AA3AF"/>
-                  연령대는 Vision AI가 추정한 익명 통계이며, 개인을 식별하지 않습니다.
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-h">
-                <h3>성별 추정</h3>
-                <span className="sub">· 익명 통계</span>
-              </div>
-              <div className="card-b" style={{display:"flex", flexDirection:"column", gap: 16}}>
-                <div style={{display:"flex", alignItems:"center", gap: 12}}>
-                  <div style={{height: 10, borderRadius: 99, background: "#F1F3F6", flex: 1, overflow: "hidden", position: "relative"}}>
-                    <div style={{position:"absolute", inset:0, width: femPct+"%", background: "oklch(0.7 0.13 0)"}}/>
-                    <div style={{position:"absolute", left: femPct+"%", right: 0, top:0, bottom:0, background: "oklch(0.62 0.13 250)"}}/>
-                  </div>
-                </div>
-                <div style={{display:"flex", justifyContent: "space-between", fontSize: 13}}>
-                  <div>
-                    <div style={{color:"#6B7280", fontSize: 11.5}}>여성</div>
-                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{femPct}%</div>
-                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">{womanCount}명</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{color:"#6B7280", fontSize: 11.5}}>남성</div>
-                    <div className="mono" style={{fontWeight: 700, fontSize: 20, marginTop: 2}}>{malePct}%</div>
-                    <div style={{fontSize: 11.5, color:"#9AA3AF"}} className="mono">{manCount}명</div>
-                  </div>
-                </div>
-                <div className="priv" style={{fontSize: 11.5}}>
-                  <Ic.Shield color="#9AA3AF"/>얼굴 식별 없이 외관 기반으로 추정합니다.
+                <div className="priv" style={{ marginTop: 14, fontSize: 11.5 }}>
+                  <Ic.Shield color="#9AA3AF" />
+                  Vision AI 익명 추정 통계입니다.
                 </div>
               </div>
             </div>
 
             <div className="card">
               <div className="card-h">
-                <h3>오늘의 한 줄 요약</h3>
-                <span className="sub">· 데이터 기반</span>
+                <h3>다음 주 방문 예측</h3>
+                <span className="sub">· 월 ~ 일</span>
               </div>
-              <div className="card-b" style={{display:"flex", flexDirection:"column", gap: 12}}>
-                <div style={{
-                  background: "linear-gradient(135deg, oklch(0.97 0.02 250), oklch(0.97 0.03 290))",
-                  border: "1px solid oklch(0.92 0.03 260)",
-                  borderRadius: 12, padding: "14px 14px", fontSize: 13.5, lineHeight: 1.6, color:"#1F2733"
-                }}>
-                  <Ic.Sparkle color="oklch(0.50 0.16 270)"/>
-                  {loading
-                    ? <div style={{marginTop: 8, color: '#9AA3AF'}}>분석 중...</div>
-                    : <>
-                        <div style={{marginTop: 8, fontWeight: 600, letterSpacing: "-0.005em"}}>
-                          총 방문자 {visitorCount}명, 혼잡도 {congestionLabel(congestion)} 수준이에요.
+              <div className="card-b">
+                {nextWeekArr.length > 0 ? (
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 9 }}
+                  >
+                    {nextWeekArr.map((v, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "20px 1fr 36px",
+                          gap: 8,
+                          alignItems: "center",
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <div
+                          style={{ color: "var(--muted)", textAlign: "right" }}
+                        >
+                          {DOW_LABELS[i]}
                         </div>
-                        <div style={{marginTop: 6, color: "#4B5260"}}>
-                          평균 체류 시간 <b>{dwellDisplay}</b>.
-                          {femPct > malePct ? ` 여성 방문자 비중(${femPct}%)이 더 높아요.` : ` 남성 방문자 비중(${malePct}%)이 더 높아요.`}
+                        <div
+                          style={{
+                            height: 7,
+                            background: "#F1F3F6",
+                            borderRadius: 99,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${(v / maxNextWeek) * 100}%`,
+                              background: "var(--accent)",
+                              borderRadius: 99,
+                            }}
+                          />
                         </div>
-                      </>
-                  }
+                        <div
+                          className="mono"
+                          style={{ fontWeight: 600, textAlign: "right" }}
+                        >
+                          {v}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p
+                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
+                  >
+                    {loading ? "불러오는 중..." : "예측 데이터가 없습니다."}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-h">
+                <span className="ai-h-badge">
+                  <Ic.Sparkle /> 마케팅 추천
+                </span>
+                <div className="right">
+                  <span className="chip">AI</span>
+                  <button
+                    className="gen-btn"
+                    onClick={generateMarketing}
+                    disabled={marketingLoading}
+                  >
+                    {marketingLoading ? "생성 중..." : "생성하기"}
+                  </button>
+                </div>
+              </div>
+              <div className="card-b">
+                {marketing?.message ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13.5,
+                      lineHeight: 1.75,
+                      color: "var(--ink-2)",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {marketing.message}
+                  </p>
+                ) : (
+                  <p
+                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
+                  >
+                    {marketingLoading ? "생성 중..." : "생성하기 버튼을 눌러 AI 마케팅 추천을 받아보세요."}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 핵심 고객 프로파일 + 히트맵 */}
+          <div className="grid-2">
+            <CoreCustomerProfile persons={raw?.persons} />
+            <div className="card">
+              <div className="card-h">
+                <h3>요일 × 시간대 히트맵</h3>
+                <span className="sub">· 방문자 밀도</span>
+              </div>
+              <div className="card-b" style={{ padding: "16px 16px 14px" }}>
+                <div className="heat-wrap">
+                  <Heatmap />
                 </div>
               </div>
             </div>
           </div>
 
+          {/* 날씨 보정 성과 상세 + 요일 이상 탐지 상세 */}
+          <div className="grid-2">
+            <WeatherPerformance weather={weather} rain={t.rain} temp={t.temp} />
+            <WeekdayAnomaly weekday={weekday} />
+          </div>
+
+          {/* 단기 방문 예측 상세 */}
+          <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} />
+
+          {/* 시간대별 인구통계 변화 */}
+          <TimeDemographics persons={raw?.persons} />
+
           {t.showPrivacyBadge && (
-            <div className="priv" style={{padding:"6px 4px 12px", fontSize: 12}}>
-              <Ic.Shield color="#9AA3AF"/>
-              본 대시보드는 Vision AI 기반 익명 집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은 수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
+            <div
+              className="priv"
+              style={{ padding: "6px 4px 12px", fontSize: 12 }}
+            >
+              <Ic.Shield color="#9AA3AF" />본 대시보드는 Vision AI 기반 익명
+              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은
+              수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
             </div>
           )}
         </div>
       </div>
 
       <TweaksPanel title="Tweaks">
-        <TweakSection label="데이터"/>
-        <TweakNumber label="비디오 ID" value={t.videoId} min={1} step={1}
-          onChange={(v) => setTweak("videoId", v)}/>
+        <TweakSection label="날씨 (보정용)" />
+        <TweakNumber
+          label="강수량 (mm)"
+          value={t.rain}
+          min={0}
+          step={1}
+          onChange={(v) => setTweak("rain", v)}
+        />
+        <TweakNumber
+          label="기온 (°C)"
+          value={t.temp}
+          min={-20}
+          max={45}
+          step={1}
+          onChange={(v) => setTweak("temp", v)}
+        />
 
-        <TweakSection label="비주얼"/>
-        <TweakColor label="액센트" value={t.accent}
+        <TweakSection label="비주얼" />
+        <TweakColor
+          label="액센트"
+          value={t.accent}
           options={["#3B7CF6", "#2563EB", "#0EA5E9", "#7C3AED", "#10B981"]}
-          onChange={(v) => setTweak("accent", v)}/>
-        <TweakRadio label="차트 스타일" value={t.chartStyle}
-          options={[{value:"area", label:"영역형"}, {value:"line", label:"선형"}]}
-          onChange={(v) => setTweak("chartStyle", v)}/>
+          onChange={(v) => setTweak("accent", v)}
+        />
 
-        <TweakSection label="패널"/>
-        <TweakToggle label="AI 인사이트 강조" value={t.showAiPanel} onChange={(v) => setTweak("showAiPanel", v)}/>
-        <TweakToggle label="개인정보 배지" value={t.showPrivacyBadge} onChange={(v) => setTweak("showPrivacyBadge", v)}/>
+        <TweakSection label="패널" />
+        <TweakToggle
+          label="개인정보 배지"
+          value={t.showPrivacyBadge}
+          onChange={(v) => setTweak("showPrivacyBadge", v)}
+        />
       </TweaksPanel>
     </div>
-  )
+  );
 }

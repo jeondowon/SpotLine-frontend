@@ -1,21 +1,22 @@
-import { Ic } from '../ui/Icons'
+export default function Header() {
+  const name    = localStorage.getItem('store_name')    ?? '스팟라인 홍대점'
+  const address = localStorage.getItem('store_address') ?? '서울시 마포구 홍익로 15'
 
-export default function Header({ storeName }) {
   return (
     <header className="hdr">
+      <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+        background: 'linear-gradient(135deg, #FFE6CC, #FFC78A)',
+        display: 'grid', placeItems: 'center',
+        fontWeight: 700, color: '#8A4A14', fontSize: 16,
+      }}>
+        {name[0]}
+      </div>
+
       <div>
-        <div className="hdr-title">{storeName}</div>
-        <div className="hdr-sub">2026년 5월 16일 토요일 · 영업 중 · 마지막 동기화 14초 전</div>
+        <div className="hdr-title">{name}</div>
+        <div className="hdr-sub">{address}</div>
       </div>
-      <div className="hdr-right">
-        <div className="ai-status" title="Vision AI 처리 정상">
-          <span className="d"/>
-          AI 처리 정상
-          <span style={{color:'#6B7280', fontWeight: 500, marginLeft: 4}}>· 2 카메라</span>
-        </div>
-        <button className="icon-btn" aria-label="알림"><Ic.Bell/></button>
-        <div className="avatar">박</div>
-      </div>
+
     </header>
   )
 }

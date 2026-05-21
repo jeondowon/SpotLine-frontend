@@ -2,19 +2,21 @@ import { Link, useLocation } from 'react-router-dom'
 import { Ic } from '../ui/Icons'
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "대시보드",    ic: <Ic.Dash/>,   to: "/" },
-  { id: "analytics", label: "분석",        ic: <Ic.Chart/>,  to: "/analytics" },
-  { id: "ai",        label: "AI 인사이트", ic: <Ic.Spark/>,  to: "/insights", badge: "NEW" },
-  { id: "settings",  label: "설정",        ic: <Ic.Gear/>,   to: "/settings" },
+  { id: "intro",     label: "소개",     ic: <Ic.Spark/>, to: "/intro",      badge: "DEMO" },
+  { id: "dashboard", label: "대시보드", ic: <Ic.Dash/>,  to: "/dashboard" },
+]
+
+const BOTTOM_ITEMS = [
+  { id: "settings", label: "설정", ic: <Ic.Gear/>, to: "/settings" },
 ]
 
 export default function Sidebar() {
   const { pathname } = useLocation()
 
   const isActive = id => {
-    if (id === "dashboard") return pathname === "/"
+    if (id === "intro")     return pathname === "/"
+    if (id === "dashboard") return pathname === "/dashboard"
     if (id === "analytics") return pathname === "/analytics"
-    if (id === "ai")        return pathname === "/insights"
     if (id === "settings")  return pathname === "/settings"
     return false
   }
@@ -41,32 +43,28 @@ export default function Sidebar() {
                 {item.badge && <span className="badge">{item.badge}</span>}
               </>
             )
-            if (item.to) {
-              return (
-                <Link key={item.id} to={item.to}
-                      className={"sb-item" + (active ? " active" : "")}
-                      style={{textDecoration: "none"}}>
-                  {inner}
-                </Link>
-              )
-            }
             return (
-              <div key={item.id} className={"sb-item" + (active ? " active" : "")}>
+              <Link key={item.id} to={item.to}
+                    className={"sb-item" + (active ? " active" : "")}
+                    style={{textDecoration: "none"}}>
                 {inner}
-              </div>
+              </Link>
             )
           })}
         </nav>
       </div>
 
-      <div className="sb-store">
-        <div className="ava">박</div>
-        <div style={{flex:1, minWidth: 0}}>
-          <div className="nm">박지원 점주</div>
-          <div className="pl">Pro · 단일 매장</div>
-        </div>
-        <Ic.Chevron color="#9AA3AF"/>
-      </div>
+      <nav className="sb-nav" style={{ marginTop: 'auto' }}>
+        {BOTTOM_ITEMS.map(item => (
+          <Link key={item.id} to={item.to}
+                className={"sb-item" + (isActive(item.id) ? " active" : "")}
+                style={{textDecoration: "none"}}>
+            {item.ic}
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+
     </aside>
   )
 }

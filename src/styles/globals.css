@@ -103,6 +103,9 @@
   .card-h .right{ margin-left:auto; display:flex; align-items:center; gap: 6px; }
   .chip{ font-size: 11px; padding: 3px 8px; border-radius: 999px; background: #F3F5F8; color: var(--ink-2); font-weight: 500; border: 1px solid var(--line); }
   .chip.dot::before{ content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; }
+  .gen-btn{ font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: #fff; border: none; cursor: pointer; line-height: 1; transition: opacity .15s; }
+  .gen-btn:hover{ opacity: .85; }
+  .gen-btn:disabled{ opacity: .5; cursor: default; }
   .card-b{ padding: 16px; }
 
   /* Main grid (chart + side) */
@@ -198,6 +201,14 @@
   .peakbars{ display:flex; align-items:flex-end; gap: 3px; height: 28px; margin-top: 6px; }
   .peakbars span{ width: 5px; background: var(--accent); border-radius: 2px; opacity: .7; }
   .peakbars span.hi{ opacity: 1; background: oklch(0.55 0.18 270); }
+
+  /* Intro page */
+  @keyframes intro-spin { to { transform: rotate(360deg); } }
+  @keyframes intro-bounce { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+  .intro-btn{ padding: 8px 18px; border-radius: 9px; border: 1px solid var(--line-2); background: #fff; font-size: 13px; cursor: pointer; color: var(--ink-2); font-family: inherit; font-weight: 500; }
+  .intro-btn:hover{ background: #F4F6F9; }
+  .intro-skip{ display: flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 9px; border: 1px solid var(--line-2); background: #fff; font-size: 13.5px; cursor: pointer; color: var(--muted); font-family: inherit; font-weight: 500; transition: all .15s; }
+  .intro-skip:hover{ color: var(--ink-2); border-color: var(--line); background: #F7F9FC; }
 
   /* Responsive layout */
   @media (max-width: 900px) {
