@@ -1,0 +1,452 @@
+diff --git a/src/pages/DashboardPage.jsx b/src/pages/DashboardPage.jsx
+index f3604b6..28ab62a 100644
+--- a/src/pages/DashboardPage.jsx
++++ b/src/pages/DashboardPage.jsx
+@@ -1,18 +1,18 @@
+ import { useEffect, useState } from "react";
+-import InfoTooltip from "../components/ui/InfoTooltip";
+ import Sidebar from "../components/layout/Sidebar";
+ import Header from "../components/dashboard/Header";
+ import TrendChart from "../components/dashboard/TrendChart";
+ import KPI from "../components/ui/KPI";
+ import { Ic } from "../components/ui/Icons";
+ import CoreCustomerProfile from "../components/dashboard/CoreCustomerProfile";
+-import TimeDemographics from "../components/dashboard/TimeDemographics";
+ import WeatherPerformance from "../components/dashboard/WeatherPerformance";
+ import WeekdayAnomaly from "../components/dashboard/WeekdayAnomaly";
+ import PredictionDetail from "../components/dashboard/PredictionDetail";
+ import Heatmap from "../components/analytics/charts/Heatmap";
+ import Donut from "../components/analytics/charts/Donut";
+ import "../styles/analytics.css";
++import DatePicker from "../components/ui/DatePicker";
++import PremiumModal from "../components/ui/PremiumModal";
+ import {
+   TweaksPanel,
+   TweakSection,
+@@ -31,6 +31,7 @@ import {
+   fetchDailyBriefing,
+   fetchRawAnalytics,
+   fetchMarketingRecommendations,
++  fetchDailyVisits,
+ } from "../api/index";
+ 
+ const TWEAK_DEFAULTS = {
+@@ -38,6 +39,7 @@ const TWEAK_DEFAULTS = {
+   showPrivacyBadge: true,
+ };
+ 
++const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
+ 
+ const AGE_KEYS = [
+   { key: "age10s", label: "10대" },
+@@ -47,17 +49,6 @@ const AGE_KEYS = [
+   { key: "age50s", label: "50대+" },
+ ];
+ 
+-function todayRange() {
+-  const now = new Date();
+-  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+-  return {
+-    startAt: s.toISOString(),
+-    endAt: now.toISOString(),
+-    day: s.toISOString(),
+-    dayOfWeek: (now.getDay() + 6) % 7,
+-  };
+-}
+-
+ function formatDwell(sec) {
+   if (!sec) return "—";
+   if (sec < 60) return `${Math.round(sec)}초`;
+@@ -71,7 +62,7 @@ function genderLabel(g) {
+ }
+ 
+ function ageLabel(a) {
+-  if (!a) return "—";
++  if (!a || a === "UNKNOWN" || a === "unknown") return "—";
+   return a.replace("s", "대");
+ }
+ 
+@@ -98,10 +89,12 @@ function resultMeta(r) {
+ export default function DashboardPage() {
+   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+   const [state, setState] = useState({ data: {}, loading: true });
++  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+   const [briefingLoading, setBriefingLoading] = useState(false);
+   const [marketingLoading, setMarketingLoading] = useState(false);
++  const [day, setDay] = useState("2026-05-23");
+ 
+-  const today = new Date();
++  const today = new Date(day);
+   const dateLabel = today.toLocaleDateString("ko-KR", {
+     year: "numeric",
+     month: "long",
+@@ -109,27 +102,55 @@ export default function DashboardPage() {
+     weekday: "long",
+   });
+ 
++  const getSeedVideoId = (targetDay) => {
++    const start = new Date("2026-04-24");
++    const current = new Date(targetDay);
++    const diffTime = current - start;
++    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
++    if (diffDays >= 0 && diffDays < 30) {
++      return diffDays + 1; // 1부터 30까지
++    }
++    return null;
++  };
++
++  function todayRange() {
++    const now = new Date();
++    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
++    const todayDay = s.toISOString().slice(0, 10);
++    return {
++      startAt: `${todayDay}T00:00:00`,
++      endAt: `${todayDay}T23:59:59`,
++      day: todayDay,
++      dayOfWeek: (now.getDay() + 6) % 7,
++    };
++  }
++
+   useEffect(() => {
+     document.documentElement.style.setProperty("--accent", t.accent);
+   }, [t.accent]);
+ 
++  // 1) 최초 마운트 시 오늘 날짜 기준으로 대시보드 전체 데이터를 한 번만 호출
+   useEffect(() => {
+-    const { startAt, endAt, day, dayOfWeek } = todayRange();
++    const { startAt, endAt, day: todayDay, dayOfWeek } = todayRange();
+     const sixtyDaysAgo = new Date();
+     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+     sixtyDaysAgo.setHours(0, 0, 0, 0);
+     const videoId = localStorage.getItem("last_video_id");
++
++    setState((s) => ({ ...s, loading: true }));
++
+     Promise.allSettled([
+       fetchCoreCustomers(startAt, endAt),
+       fetchHourlyPopulation(startAt, endAt),
+-      fetchWeatherImpact(day),
+-      fetchWeekdayPatterns(day, dayOfWeek),
++      fetchWeatherImpact(`${todayDay}T00:00:00`),
++      fetchWeekdayPatterns(`${todayDay}T00:00:00`, dayOfWeek),
+       fetchVisitCount(sixtyDaysAgo.toISOString(), endAt),
+       fetchTomorrowPrediction(),
+       fetchNextWeekPrediction(),
+       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
++      fetchDailyVisits(todayDay),
+     ]).then(
+-      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw]) => {
++      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits]) => {
+         setState({
+           loading: false,
+           data: {
+@@ -141,14 +162,46 @@ export default function DashboardPage() {
+             tomorrow: tomorrow.status === "fulfilled" ? tomorrow.value : null,
+             nextWeek: nextWeek.status === "fulfilled" ? nextWeek.value : null,
+             raw: raw.status === "fulfilled" ? raw.value : null,
++            dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : null,
+           },
+         });
+       },
+     );
+   }, []);
+ 
++  // 2) 날짜 변경 시, 오직 4개 핵심 KPI 관련 API만 해당 날짜 하루 치 데이터로 교체 (나머지는 유지)
++  useEffect(() => {
++    if (day === "2026-05-23" && state.data.visits) {
++      // 초기 오늘 날짜 데이터가 이미 로드 완료되었다면 불필요한 재호출 차단
++      return;
++    }
++
++    const startAt = `${day}T00:00:00`;
++    const endAt = `${day}T23:59:59`;
++    const seedVideoId = getSeedVideoId(day);
++    const videoId = seedVideoId || localStorage.getItem("last_video_id") || 1;
++
++    Promise.allSettled([
++      fetchCoreCustomers(startAt, endAt),
++      fetchWeatherImpact(`${day}T00:00:00`),
++      videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
++      fetchDailyVisits(day),
++    ]).then(([core, weather, raw, dailyVisits]) => {
++      setState((s) => ({
++        ...s,
++        data: {
++          ...s.data,
++          core: core.status === "fulfilled" ? core.value : s.data.core,
++          weather: weather.status === "fulfilled" ? weather.value : s.data.weather,
++          raw: raw.status === "fulfilled" ? raw.value : s.data.raw,
++          dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : s.data.dailyVisits,
++        },
++      }));
++    });
++  }, [day]);
++
+   const { data, loading } = state;
+-  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw } =
++  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits } =
+     data;
+ 
+   const [briefing, setBriefing] = useState(null);
+@@ -180,9 +233,13 @@ export default function DashboardPage() {
+ 
+   const weatherMeta = resultMeta(weather?.result);
+ 
+-  const coreLabel = core
+-    ? `${ageLabel(core.age)} ${genderLabel(core.gender)}`
+-    : "—";
++  const coreLabel = (() => {
++    if (!core) return "—";
++    const age = ageLabel(core.age);
++    const gender = genderLabel(core.gender);
++    const parts = [age, gender].filter(v => v !== "—");
++    return parts.length > 0 ? parts.join(" ") : "—";
++  })();
+ 
+   const ageGroups = AGE_KEYS.map(({ key, label }) => ({
+     label,
+@@ -198,14 +255,20 @@ export default function DashboardPage() {
+       ];
+     }
+     const f = persons.filter((p) => p.gender === "female").length;
+-    const fPct = Math.round((f / persons.length) * 100);
++    const fPct = Number(((f / persons.length) * 100).toFixed(1));
+     return [
+       { label: "여성", pct: fPct, color: "oklch(0.7 0.13 0)" },
+-      { label: "남성", pct: 100 - fPct, color: "oklch(0.62 0.13 250)" },
++      { label: "남성", pct: Number((100 - fPct).toFixed(1)), color: "oklch(0.62 0.13 250)" },
+     ];
+   })();
+ 
++  const nextWeekArr = (nextWeek?.result ?? []).map((v) =>
++    typeof v === "object" ? (v?.expectedVisits ?? 0) : v,
++  );
++  const maxNextWeek = Math.max(...nextWeekArr, 1);
+ 
++  const visitsTrend = visits?.data?.[0];
++  const visitCount = visitsTrend?.length > 0 ? Math.round(visitsTrend[visitsTrend.length - 1]) : null;
+ 
+   return (
+     <div className="app">
+@@ -228,6 +291,7 @@ export default function DashboardPage() {
+                     : "오늘 매장 인사이트를 확인하세요."}
+                 </h1>
+               </div>
++              <DatePicker day={day} setDay={setDay} />
+             </div>
+           </div>
+ 
+@@ -238,12 +302,20 @@ export default function DashboardPage() {
+               icon={<Ic.Users />}
+               iconBg="oklch(0.95 0.03 250)"
+               iconFg="oklch(0.48 0.16 250)"
+-              value={raw?.summary?.totalVisitors ?? "—"}
+-              unit={raw ? "명" : ""}
+-              hint="분석된 영상 기준"
++              value={
++                dailyVisits?.totalVisits != null
++                  ? (typeof dailyVisits.totalVisits === "number"
++                      ? (Number.isInteger(dailyVisits.totalVisits)
++                          ? dailyVisits.totalVisits.toLocaleString()
++                          : dailyVisits.totalVisits.toFixed(1))
++                      : dailyVisits.totalVisits)
++                  : "—"
++              }
++              unit={dailyVisits?.totalVisits != null ? "명" : ""}
++              hint="선택 날짜 기준"
+             />
+             <KPI
+-              label="오늘 핵심 고객"
++              label="핵심 고객"
+               icon={<Ic.Users />}
+               iconBg="oklch(0.95 0.03 250)"
+               iconFg="oklch(0.48 0.16 250)"
+@@ -259,18 +331,18 @@ export default function DashboardPage() {
+               hint="분석된 영상 기준"
+             />
+             <KPI
+-              label="오늘 날씨 대비 실제 성과"
++              label="날씨 보정 성과"
+               icon={<Ic.Cloud />}
+               iconBg={weatherMeta.iconBg}
+               iconFg={weatherMeta.iconFg}
+               value={
+                 weather
+-                  ? `${Math.round((weather.realValue / weather.expectValue) * 100)}%`
++                  ? `${((weather.realValue / weather.expectValue) * 100).toFixed(1)}%`
+                   : "—"
+               }
+               hint={
+                 weather
+-                  ? `${weatherMeta.text} · 기대 ${weather.expectValue}명 대비`
++                  ? `${weatherMeta.text} · 기대 ${weather.expectValue?.toFixed(1)}명 대비`
+                   : "날씨 영향 보정 후"
+               }
+             />
+@@ -283,11 +355,10 @@ export default function DashboardPage() {
+               <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
+               <div className="right">
+                 <span className="chip dot">날씨 보정값</span>
+-                <InfoTooltip text={'최근 60일간 방문자 수의 진짜 흐름을 보여줘요.\n\n하루하루 들쭉날쭉한 노이즈를 줄이고, 5·10·20·60일 이동평균선으로 실제 트렌드를 읽을 수 있어요. 파란 점선은 날씨 영향을 보정한 방문자 수예요.'} />
+               </div>
+             </div>
+             <div className="card-b" style={{ padding: "8px 12px 14px" }}>
+-              <TrendChart data={visits} />
++              <TrendChart data={visits} selectedDay={day} />
+             </div>
+           </div>
+ 
+@@ -297,7 +368,6 @@ export default function DashboardPage() {
+               <div className="card-h">
+                 <h3>오늘 연령대 분포</h3>
+                 <span className="sub">· 시간대별 인구통계</span>
+-                <div className="right"><InfoTooltip text={'오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요.'} /></div>
+               </div>
+               <div className="card-b">
+                 <div className="ages">
+@@ -318,9 +388,9 @@ export default function DashboardPage() {
+               </div>
+             </div>
+ 
+-            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact />
++            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact={true} />
+ 
+-            <CoreCustomerProfile persons={raw?.persons} />
++            <CoreCustomerProfile core={core} />
+           </div>
+ 
+           {/* AI 일일 브리핑 + AI 마케팅 추천 */}
+@@ -339,7 +409,6 @@ export default function DashboardPage() {
+                   >
+                     {briefingLoading ? "생성 중..." : "생성하기"}
+                   </button>
+-                  <InfoTooltip text={'오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요. 하루를 마무리하며 오늘을 복기하고 싶을 때 눌러보세요.'} />
+                 </div>
+               </div>
+               <div className="card-b">
+@@ -381,7 +450,6 @@ export default function DashboardPage() {
+                   >
+                     {marketingLoading ? "생성 중..." : "생성하기"}
+                   </button>
+-                  <InfoTooltip text={'오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요.'} />
+                 </div>
+               </div>
+               <div className="card-b">
+@@ -416,10 +484,6 @@ export default function DashboardPage() {
+             <WeekdayAnomaly weekday={weekday} />
+           </div>
+ 
+-
+-          {/* 시간대별 인구통계 변화 */}
+-          <TimeDemographics persons={raw?.persons} />
+-
+           {/* PRO: 히트맵 + 성별 분포 */}
+           <div className="grid-2">
+             <div className="card" style={{ position: "relative" }}>
+@@ -428,16 +492,17 @@ export default function DashboardPage() {
+                 <span className="sub">· 방문자 밀도</span>
+                 <div className="right">
+                   <span
++                    onClick={() => setIsPremiumModalOpen(true)}
+                     className="chip"
+                     style={{
+                       background: "oklch(0.92 0.06 290)",
+                       color: "oklch(0.42 0.18 290)",
+                       fontWeight: 700,
++                      cursor: "pointer"
+                     }}
+                   >
+                     PRO
+                   </span>
+-                  <InfoTooltip text={'요일과 시간대를 격자로 나눠, 어느 타이밍에 방문자가 몰리는지 색상으로 보여줘요.\n\n피크 타임과 한산한 시간대를 한눈에 파악해서 효율적인 운영 계획을 세울 수 있어요. PRO 플랜에서 이용 가능해요.'} />
+                 </div>
+               </div>
+               <div
+@@ -455,6 +520,7 @@ export default function DashboardPage() {
+                   <Heatmap />
+                 </div>
+                 <div
++                  onClick={() => setIsPremiumModalOpen(true)}
+                   style={{
+                     position: "absolute",
+                     inset: 0,
+@@ -463,7 +529,12 @@ export default function DashboardPage() {
+                     alignItems: "center",
+                     justifyContent: "center",
+                     gap: 8,
++                    cursor: "pointer",
++                    background: "rgba(255, 255, 255, 0.05)",
++                    transition: "background 0.2s"
+                   }}
++                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
++                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                 >
+                   <Ic.Lock color="oklch(0.42 0.18 290)" />
+                   <div
+@@ -495,16 +566,17 @@ export default function DashboardPage() {
+                 <span className="sub">· AI 추정 · 익명</span>
+                 <div className="right">
+                   <span
++                    onClick={() => setIsPremiumModalOpen(true)}
+                     className="chip"
+                     style={{
+                       background: "oklch(0.92 0.06 290)",
+                       color: "oklch(0.42 0.18 290)",
+                       fontWeight: 700,
++                      cursor: "pointer"
+                     }}
+                   >
+                     PRO
+                   </span>
+-                  <InfoTooltip text={'Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요. PRO 플랜에서 이용 가능해요.'} />
+                 </div>
+               </div>
+               <div
+@@ -546,6 +618,7 @@ export default function DashboardPage() {
+                   </div>
+                 </div>
+                 <div
++                  onClick={() => setIsPremiumModalOpen(true)}
+                   style={{
+                     position: "absolute",
+                     inset: 0,
+@@ -554,7 +627,12 @@ export default function DashboardPage() {
+                     alignItems: "center",
+                     justifyContent: "center",
+                     gap: 8,
++                    cursor: "pointer",
++                    background: "rgba(255, 255, 255, 0.05)",
++                    transition: "background 0.2s"
+                   }}
++                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
++                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                 >
+                   <Ic.Lock color="oklch(0.42 0.18 290)" />
+                   <div
+@@ -644,6 +722,7 @@ export default function DashboardPage() {
+                 더욱 전문적인 분석을 기반으로 프리미엄이 해답을 찾아드릴게요.
+               </p>
+               <button
++                onClick={() => setIsPremiumModalOpen(true)}
+                 style={{
+                   alignSelf: "flex-start",
+                   padding: "11px 20px",
+@@ -756,7 +835,7 @@ export default function DashboardPage() {
+               style={{ padding: "6px 4px 12px", fontSize: 12 }}
+             >
+               <Ic.Shield color="#9AA3AF" />본 대시보드는 Vision AI 기반 익명
+-              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은
++              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별은
+               수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
+             </div>
+           )}
+@@ -779,6 +858,9 @@ export default function DashboardPage() {
+           onChange={(v) => setTweak("showPrivacyBadge", v)}
+         />
+       </TweaksPanel>
++      {isPremiumModalOpen && (
++        <PremiumModal onClose={() => setIsPremiumModalOpen(false)} />
++      )}
+     </div>
+   );
+ }

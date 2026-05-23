@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import InfoTooltip from "../components/ui/InfoTooltip";
 import Sidebar from "../components/layout/Sidebar";
 import Header from "../components/dashboard/Header";
 import TrendChart from "../components/dashboard/TrendChart";
@@ -355,6 +356,7 @@ export default function DashboardPage() {
               <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
               <div className="right">
                 <span className="chip dot">날씨 보정값</span>
+                <InfoTooltip text={'최근 60일간 방문자 수의 진짜 흐름을 보여줘요.\n\n하루하루 들쭉날쭉한 노이즈를 줄이고, 5·10·20·60일 이동평균선으로 실제 트렌드를 읽을 수 있어요. 파란 점선은 날씨 영향을 보정한 방문자 수예요.'} />
               </div>
             </div>
             <div className="card-b" style={{ padding: "8px 12px 14px" }}>
@@ -368,6 +370,7 @@ export default function DashboardPage() {
               <div className="card-h">
                 <h3>오늘 연령대 분포</h3>
                 <span className="sub">· 시간대별 인구통계</span>
+                <div className="right"><InfoTooltip text={'오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요.'} /></div>
               </div>
               <div className="card-b">
                 <div className="ages">
@@ -409,6 +412,7 @@ export default function DashboardPage() {
                   >
                     {briefingLoading ? "생성 중..." : "생성하기"}
                   </button>
+                  <InfoTooltip text={'오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요. 하루를 마무리하며 오늘을 복기하고 싶을 때 눌러보세요.'} />
                 </div>
               </div>
               <div className="card-b">
@@ -450,6 +454,7 @@ export default function DashboardPage() {
                   >
                     {marketingLoading ? "생성 중..." : "생성하기"}
                   </button>
+                  <InfoTooltip text={'오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요.'} />
                 </div>
               </div>
               <div className="card-b">
@@ -503,6 +508,7 @@ export default function DashboardPage() {
                   >
                     PRO
                   </span>
+                  <InfoTooltip text={'요일과 시간대를 격자로 나눠, 어느 타이밍에 방문자가 몰리는지 색상으로 보여줘요.\n\n피크 타임과 한산한 시간대를 한눈에 파악해서 효율적인 운영 계획을 세울 수 있어요. PRO 플랜에서 이용 가능해요.'} />
                 </div>
               </div>
               <div
@@ -577,6 +583,7 @@ export default function DashboardPage() {
                   >
                     PRO
                   </span>
+                  <InfoTooltip text={'Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요. PRO 플랜에서 이용 가능해요.'} />
                 </div>
               </div>
               <div
