@@ -38,7 +38,6 @@ const TWEAK_DEFAULTS = {
   showPrivacyBadge: true,
 };
 
-const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 const AGE_KEYS = [
   { key: "age10s", label: "10대" },
