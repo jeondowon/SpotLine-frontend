@@ -90,39 +90,39 @@ export default function IntroPage() {
 
   // persons 배열에서 성별·연령대 집계
   const persons = result?.persons ?? [];
+  const knownGender = persons.filter((p) => p.gender === "female" || p.gender === "male");
   const genderStats =
-    persons.length > 0
+    knownGender.length > 0
       ? (() => {
-          const female = persons.filter((p) => p.gender === "female").length;
+          const female = knownGender.filter((p) => p.gender === "female").length;
           return {
-            female: Math.round((female / persons.length) * 100),
-            male: Math.round(
-              ((persons.length - female) / persons.length) * 100,
-            ),
+            female: Math.round((female / knownGender.length) * 100),
+            male: Math.round(((knownGender.length - female) / knownGender.length) * 100),
           };
         })()
       : null;
 
+  const knownAge = persons.filter((p) => p.ageGroup && p.ageGroup !== "unknown");
   const ageStats =
-    persons.length > 0
+    knownAge.length > 0
       ? (() => {
           const counts = {};
-          persons.forEach((p) => {
-            counts[p.age_group] = (counts[p.age_group] || 0) + 1;
+          knownAge.forEach((p) => {
+            counts[p.ageGroup] = (counts[p.ageGroup] || 0) + 1;
           });
           const maxV = Math.max(...Object.values(counts));
           return Object.entries(counts)
             .sort((a, b) => b[1] - a[1])
             .map(([k, v]) => ({
               label: k.replace("s", "대"),
-              pct: Math.round((v / persons.length) * 100),
+              pct: Math.round((v / knownAge.length) * 100),
               width: Math.round((v / maxV) * 100),
             }));
         })()
       : null;
 
   const congestion = result
-    ? congestionMeta(result.summary.peak_congestion)
+    ? congestionMeta(result.summary.peakCongestion)
     : null;
 
   return (
@@ -619,7 +619,7 @@ export default function IntroPage() {
                         gap: 3,
                       }}
                     >
-                      {result.summary.total_visitors}
+                      {result.summary.totalVisitors}
                       <span style={{ fontSize: 13, fontWeight: 500 }}>명</span>
                     </div>
                   </div>
@@ -675,7 +675,7 @@ export default function IntroPage() {
                         marginTop: 5,
                       }}
                     >
-                      {formatDwell(result.summary.avg_dwell_time_seconds)}
+                      {formatDwell(result.summary.avgDwellTimeSeconds)}
                     </div>
                   </div>
                 </div>
