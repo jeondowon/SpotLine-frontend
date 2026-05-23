@@ -1,5 +1,6 @@
 import { Ic } from './Icons'
 import Spark from './Spark'
+import { ceil1 } from '../../utils/format'
 
 export default function KPI({ icon, iconBg, iconFg, label, value, unit, delta, spark, sparkColor, hint, className = "" }) {
   const up = delta > 0, dn = delta < 0;
@@ -16,7 +17,7 @@ export default function KPI({ icon, iconBg, iconFg, label, value, unit, delta, s
         {delta !== undefined ? (
           <>
             <span className={"delta " + (up ? "up" : dn ? "dn" : "flat")}>
-              {up ? "▲" : dn ? "▼" : "—"} {Math.abs(delta).toFixed(1)}%
+              {up ? "▲" : dn ? "▼" : "—"} {ceil1(Math.abs(delta))}%
             </span>
             <span>{hint || "직전 기간 대비"}</span>
           </>

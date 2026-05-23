@@ -30,6 +30,17 @@ export default function PremiumModal({ onClose }) {
   const [addonChecked, setAddonChecked] = useState(false);
   const [activeTab, setActiveTab] = useState('card'); // 'card' | 'bank'
   const [focusedField, setFocusedField] = useState(null);
+  const [upgradeClickCount, setUpgradeClickCount] = useState(0);
+  const isPro = upgradeClickCount >= 10;
+  const [isCompleted, setIsCompleted] = useState(false);
+
+  const handleUpgradeClick = () => {
+    if (isPro) {
+      setIsCompleted(true);
+    } else {
+      setUpgradeClickCount(c => c + 1);
+    }
+  };
 
   const [form, setForm] = useState({
     name: 'HGU',
@@ -45,8 +56,10 @@ export default function PremiumModal({ onClose }) {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
-  // Notion Price Calculations
-  const basePrice = billingOption === 'monthly' ? 10 : 8;
+  // Price Calculations
+  const basePrice = isPro
+    ? (billingOption === 'monthly' ? 25 : 20)
+    : (billingOption === 'monthly' ? 10 : 8);
   const addonPrice = addonChecked ? 10 : 0;
   const totalPrice = basePrice + addonPrice;
 
@@ -125,14 +138,51 @@ export default function PremiumModal({ onClose }) {
           ×
         </button>
 
+        {/* Completion Screen */}
+        {isCompleted ? (
+          <div style={{ padding: '72px 40px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'oklch(0.95 0.06 290)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="oklch(0.42 0.18 290)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 700, letterSpacing: '-0.025em', color: 'oklch(0.42 0.18 290)' }}>
+              프로 결제가 완료되었습니다 ✦
+            </h2>
+            <p style={{ margin: '0 0 28px', fontSize: '14.5px', color: 'rgba(55, 53, 47, 0.6)', lineHeight: 1.5, maxWidth: 340 }}>
+              Spotline Pro 플랜이 활성화되었습니다. 모든 고급 기능을 이용하실 수 있습니다.
+            </p>
+            <button
+              onClick={onClose}
+              style={{
+                height: '40px', padding: '0 28px',
+                background: 'oklch(0.42 0.18 290)',
+                border: 'none', borderRadius: '5px',
+                color: '#fff', fontSize: '14px', fontWeight: '600',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              닫기
+            </button>
+          </div>
+        ) : (
+          <>
+
         {/* Header Block */}
         <div style={{ padding: '36px 40px 0' }}>
           <NotionPlusLogo />
-          <h2 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 700, letterSpacing: '-0.025em' }}>
-            Upgrade to Plus
+          <h2 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 700, letterSpacing: '-0.025em', color: isPro ? 'oklch(0.42 0.18 290)' : '#1F2733' }}>
+            {isPro ? 'Upgrade to Pro ✦' : 'Upgrade to Plus'}
           </h2>
           <p style={{ margin: 0, fontSize: '14.5px', color: 'rgba(55, 53, 47, 0.65)', lineHeight: 1.4 }}>
-            Do more with unlimited blocks, files, automations & integrations.
+            {isPro
+              ? 'Unlock advanced analytics, priority support, and unlimited everything.'
+              : 'Do more with unlimited blocks, files, automations & integrations.'}
           </p>
         </div>
 
@@ -400,7 +450,7 @@ export default function PremiumModal({ onClose }) {
                 <div
                   onClick={() => setBillingOption('monthly')}
                   style={{
-                    border: billingOption === 'monthly' ? '2px solid #2383e2' : '1.5px solid #e3e2e0',
+                    border: billingOption === 'monthly' ? `2px solid ${isPro ? 'oklch(0.42 0.18 290)' : '#2383e2'}` : '1.5px solid #e3e2e0',
                     borderRadius: '8px',
                     padding: '12px 14px',
                     cursor: 'pointer',
@@ -411,18 +461,13 @@ export default function PremiumModal({ onClose }) {
                     transition: 'border-color 0.15s ease'
                   }}
                 >
-                  {/* Custom radio indicator */}
                   <div style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    border: billingOption === 'monthly' ? '5px solid #2383e2' : '1.5px solid #e3e2e0',
-                    boxSizing: 'border-box',
-                    flexShrink: 0
+                    width: 16, height: 16, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0,
+                    border: billingOption === 'monthly' ? `5px solid ${isPro ? 'oklch(0.42 0.18 290)' : '#2383e2'}` : '1.5px solid #e3e2e0',
                   }} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#37352f' }}>Pay monthly</span>
-                    <span style={{ fontSize: '12px', color: 'rgba(55, 53, 47, 0.5)', marginTop: '2px' }}>$10 / month / member</span>
+                    <span style={{ fontSize: '12px', color: 'rgba(55, 53, 47, 0.5)', marginTop: '2px' }}>{isPro ? '$25' : '$10'} / month / member</span>
                   </div>
                 </div>
 
@@ -430,7 +475,7 @@ export default function PremiumModal({ onClose }) {
                 <div
                   onClick={() => setBillingOption('annual')}
                   style={{
-                    border: billingOption === 'annual' ? '2px solid #2383e2' : '1.5px solid #e3e2e0',
+                    border: billingOption === 'annual' ? `2px solid ${isPro ? 'oklch(0.42 0.18 290)' : '#2383e2'}` : '1.5px solid #e3e2e0',
                     borderRadius: '8px',
                     padding: '12px 14px',
                     cursor: 'pointer',
@@ -441,27 +486,19 @@ export default function PremiumModal({ onClose }) {
                     transition: 'border-color 0.15s ease'
                   }}
                 >
-                  {/* Custom radio indicator */}
                   <div style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    border: billingOption === 'annual' ? '5px solid #2383e2' : '1.5px solid #e3e2e0',
-                    boxSizing: 'border-box',
-                    flexShrink: 0
+                    width: 16, height: 16, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0,
+                    border: billingOption === 'annual' ? `5px solid ${isPro ? 'oklch(0.42 0.18 290)' : '#2383e2'}` : '1.5px solid #e3e2e0',
                   }} />
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#37352f' }}>Pay annually</span>
-                    <span style={{ fontSize: '12px', color: 'rgba(55, 53, 47, 0.5)', marginTop: '2px' }}>$8 / month / member</span>
+                    <span style={{ fontSize: '12px', color: 'rgba(55, 53, 47, 0.5)', marginTop: '2px' }}>{isPro ? '$20' : '$8'} / month / member</span>
                   </div>
-                  {/* Green badge */}
                   <span style={{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    color: '#0b6e4f',
-                    background: '#e2f6ec',
-                    padding: '2px 8px',
-                    borderRadius: '99px'
+                    fontSize: '11px', fontWeight: '700',
+                    color: isPro ? 'oklch(0.42 0.18 290)' : '#0b6e4f',
+                    background: isPro ? 'oklch(0.95 0.06 290)' : '#e2f6ec',
+                    padding: '2px 8px', borderRadius: '99px'
                   }}>
                     Save 20%
                   </span>
@@ -540,10 +577,11 @@ export default function PremiumModal({ onClose }) {
 
               {/* Upgrade Button */}
               <button
+                onClick={handleUpgradeClick}
                 style={{
                   width: '100%',
                   height: '40px',
-                  background: '#2383e2',
+                  background: isPro ? 'oklch(0.42 0.18 290)' : '#2383e2',
                   border: 'none',
                   borderRadius: '5px',
                   color: '#fff',
@@ -555,12 +593,12 @@ export default function PremiumModal({ onClose }) {
                   justifyContent: 'center',
                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                   fontFamily: 'inherit',
-                  transition: 'background 0.15s ease'
+                  transition: 'background 0.15s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#1b74cb'}
-                onMouseLeave={e => e.currentTarget.style.background = '#2383e2'}
+                onMouseEnter={e => e.currentTarget.style.background = isPro ? 'oklch(0.36 0.18 290)' : '#1b74cb'}
+                onMouseLeave={e => e.currentTarget.style.background = isPro ? 'oklch(0.42 0.18 290)' : '#2383e2'}
               >
-                Upgrade to Plus
+                {isPro ? 'Upgrade to Pro ✦' : 'Upgrade to Plus'}
               </button>
 
               <p style={{ margin: '12px 0 0', fontSize: '11px', color: 'rgba(55, 53, 47, 0.45)', textAlign: 'center', lineHeight: 1.45 }}>
@@ -572,6 +610,8 @@ export default function PremiumModal({ onClose }) {
           </div>
 
         </div>
+          </>
+        )}
       </div>
     </div>
   );

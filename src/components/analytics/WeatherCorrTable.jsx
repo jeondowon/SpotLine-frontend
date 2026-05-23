@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { Ic } from '../ui/Icons'
 import { WEATHER_CORR } from '../../data/analytics'
+import { ceil1 } from '../../utils/format'
 
 export default function WeatherCorrTable() {
   const cell = (v, d) => {
@@ -9,7 +10,7 @@ export default function WeatherCorrTable() {
       <div>
         <div className="mono" style={{fontWeight: 600, fontSize: 13}}>{v}</div>
         <div className={"delta-cell " + cls} style={{fontSize: 11, marginTop: 2}}>
-          {d > 0 ? "▲" : d < 0 ? "▼" : "—"} {Math.abs(d).toFixed(1)}%
+          {d > 0 ? "▲" : d < 0 ? "▼" : "—"} {ceil1(Math.abs(d))}%
         </div>
       </div>
     )
@@ -43,7 +44,7 @@ export default function WeatherCorrTable() {
             {cell(w.v + "명", w.dv)}
             {cell(w.stay + "분", w.ds)}
             {cell(w.cong, w.dc)}
-            {cell(w.conv.toFixed(1) + "%", w.dcv)}
+            {cell(ceil1(w.conv) + "%", w.dcv)}
           </Fragment>
         )
       })}

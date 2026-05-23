@@ -1,5 +1,6 @@
 import { Ic } from "../ui/Icons";
 import InfoTooltip from "../ui/InfoTooltip";
+import { ceil1 } from "../../utils/format"
 
 const SLOTS = [
   { label: "오전", range: "09~12시", start: 9, end: 12 },
@@ -155,7 +156,7 @@ export default function TimeDemographics({ persons }) {
                               className="mono"
                               style={{ fontSize: 11.5, fontWeight: 600 }}
                             >
-                              {g.pct}%
+                              {ceil1(g.pct)}%
                             </span>
                           </div>
                           <div

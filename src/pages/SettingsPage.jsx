@@ -195,10 +195,15 @@ export default function SettingsPage() {
   }, [t.accent])
 
   // 매장 프로필
-  const [storeName,    setStoreName]    = useState(() => localStorage.getItem('store_name')    ?? '스팟라인 홍대점')
-  const [storeAddress, setStoreAddress] = useState(() => localStorage.getItem('store_address') ?? '서울시 마포구 홍익로 15')
-  const [bizType, setBizType] = useState('카페')
-  const [closedDays, setClosedDays] = useState(['일'])
+  const [storeName,    setStoreName]    = useState(() => localStorage.getItem('store_name')    ?? '한동대학교 명성')
+  const [storeAddress, setStoreAddress] = useState(() => localStorage.getItem('store_address') ?? '한동대학교')
+  const [bizType,      setBizType]      = useState(() => localStorage.getItem('store_biz_type') ?? '음식점')
+  const [openTime,     setOpenTime]     = useState(() => localStorage.getItem('store_open_time')  ?? '09:00')
+  const [closeTime,    setCloseTime]    = useState(() => localStorage.getItem('store_close_time') ?? '22:00')
+  const [closedDays,   setClosedDays]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem('store_closed_days')) ?? ['일'] } catch { return ['일'] }
+  })
+  const [saved, setSaved] = useState(false)
 
   // 혼잡도
   const [threshLow, setThreshLow]   = useState(10)
@@ -279,9 +284,11 @@ export default function SettingsPage() {
             </FieldRow>
             <FieldRow label="영업시간">
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <TextInput defaultValue="09:00"/>
-                <span style={{ color: '#9AA3AF', fontSize: 13 }}>~</span>
-                <TextInput defaultValue="22:00"/>
+                <input type="text" value={openTime} onChange={e => setOpenTime(e.target.value)}
+                  style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
+                <span style={{ color: '#9AA3AF', fontSize: 13, flexShrink: 0 }}>~</span>
+                <input type="text" value={closeTime} onChange={e => setCloseTime(e.target.value)}
+                  style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
               </div>
             </FieldRow>
             <FieldRow label="휴무일">
@@ -301,10 +308,26 @@ export default function SettingsPage() {
               <TextInput defaultValue="admin@spotline.kr"/>
             </FieldRow>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+            {saved && (
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: '#10B981',
+                display: 'flex', alignItems: 'center', gap: 4,
+                animation: 'fadeIn .2s ease',
+              }}>
+                ✓ 저장되었습니다
+              </span>
+            )}
             <button onClick={() => {
-              localStorage.setItem('store_name', storeName)
-              localStorage.setItem('store_address', storeAddress)
+              localStorage.setItem('store_name',        storeName)
+              localStorage.setItem('store_address',     storeAddress)
+              localStorage.setItem('store_biz_type',    bizType)
+              localStorage.setItem('store_open_time',   openTime)
+              localStorage.setItem('store_close_time',  closeTime)
+              localStorage.setItem('store_closed_days', JSON.stringify(closedDays))
+              window.dispatchEvent(new Event('store-profile-updated'))
+              setSaved(true)
+              setTimeout(() => setSaved(false), 2500)
             }} style={{
               height: 36, padding: '0 20px', borderRadius: 8, border: 'none',
               background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600,

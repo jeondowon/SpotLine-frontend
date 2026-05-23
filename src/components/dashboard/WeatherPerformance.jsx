@@ -1,4 +1,5 @@
 import InfoTooltip from '../ui/InfoTooltip';
+import { ceil1 } from '../../utils/format'
 
 const INFO_TEXT = '비가 와서 손님이 적었다면, 날씨 탓일까요? 매장 탓일까요?\n\n날씨와 요일 효과를 제거하고 순수하게 매장 성과만 평가해줘요. 오늘 조건에서 기대되는 방문자 수 대비 실제로 얼마나 잘 됐는지 확인할 수 있어요.';
 
@@ -58,7 +59,7 @@ function BarRow({ label, value, max, color }) {
         />
       </div>
       <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>
-        {typeof value === "number" ? value.toFixed(1) : value}
+        {typeof value === "number" ? ceil1(value) : value}
       </div>
     </div>
   );
@@ -84,7 +85,7 @@ export default function WeatherPerformance({ weather }) {
 
   const { realValue, expectValue, result } = weather;
   const m = meta(result);
-  const ratio = ((realValue / expectValue) * 100).toFixed(1);
+  const ratio = ceil1((realValue / expectValue) * 100);
   const maxVal = Math.max(realValue, expectValue);
 
   return (
@@ -123,8 +124,8 @@ export default function WeatherPerformance({ weather }) {
           }}
         >
           {[
-            { label: "어제 실제 방문", value: typeof realValue === "number" ? realValue.toFixed(1) : realValue, unit: "명", color: "var(--ink)" },
-            { label: "날씨·요일 기댓값", value: typeof expectValue === "number" ? expectValue.toFixed(1) : expectValue, unit: "명", color: "var(--muted)" },
+            { label: "어제 실제 방문", value: typeof realValue === "number" ? ceil1(realValue) : realValue, unit: "명", color: "var(--ink)" },
+            { label: "날씨·요일 기댓값", value: typeof expectValue === "number" ? ceil1(expectValue) : expectValue, unit: "명", color: "var(--muted)" },
             { label: "보정 성과", value: `${ratio}%`, unit: "", color: m.ink },
           ].map((s, i) => (
             <div

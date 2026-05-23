@@ -1,4 +1,5 @@
 import InfoTooltip from '../ui/InfoTooltip';
+import { ceil1 } from '../../utils/format'
 
 const INFO_TEXT = '오늘이 같은 요일 평균과 비교해서 얼마나 특이한지 보여줘요.\n\n통계적으로 이상하게 많거나 적을 때 바로 알 수 있어요. ±2σ(표준편차 2배) 기준으로 상위 2.3% 또는 하위 2.3%에 들어오면 이상 신호로 판단해요.';
 
@@ -122,7 +123,7 @@ function BarRow({ label, value, max, color }) {
         />
       </div>
       <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>
-        {typeof value === "number" ? value.toFixed(1) : value}
+        {typeof value === "number" ? ceil1(value) : value}
       </div>
     </div>
   );
@@ -152,7 +153,7 @@ export default function WeekdayAnomaly({ weekday }) {
   const { realValue, expectValue, result } = weekday;
   const m = meta(result);
   const diff = realValue - expectValue;
-  const diffPct = ((diff / expectValue) * 100).toFixed(1);
+  const diffPct = ceil1((diff / expectValue) * 100);
   const maxVal = Math.max(realValue, expectValue);
 
   return (
@@ -190,8 +191,8 @@ export default function WeekdayAnomaly({ weekday }) {
           }}
         >
           {[
-            { label: `오늘(${dowLabel}) 방문`, value: typeof realValue === "number" ? realValue.toFixed(1) : realValue, unit: "명", color: "var(--ink)" },
-            { label: `${dowLabel}요일 평균`, value: typeof expectValue === "number" ? expectValue.toFixed(1) : expectValue, unit: "명", color: "var(--muted)" },
+            { label: `오늘(${dowLabel}) 방문`, value: typeof realValue === "number" ? ceil1(realValue) : realValue, unit: "명", color: "var(--ink)" },
+            { label: `${dowLabel}요일 평균`, value: typeof expectValue === "number" ? ceil1(expectValue) : expectValue, unit: "명", color: "var(--muted)" },
             {
               label: "평균 대비 편차",
               value: `${diff > 0 ? "+" : ""}${diffPct}%`,

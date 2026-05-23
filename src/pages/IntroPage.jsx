@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ic } from "../components/ui/Icons";
 import { uploadVideo, fetchVideoStatus, fetchRawAnalytics } from "../api/index";
+import { ceil1 } from "../utils/format";
 
 function congestionMeta(c) {
   if (c === "low") return { text: "낮음", color: "oklch(0.42 0.12 155)", bg: "var(--good-soft)" };
@@ -271,7 +272,7 @@ export default function IntroPage() {
                         <div style={{ height: 8, background: "#F1F3F6", borderRadius: 99, overflow: "hidden" }}>
                           <div style={{ height: "100%", width: `${g.pct}%`, background: g.color, borderRadius: 99, transition: "width .6s ease" }}/>
                         </div>
-                        <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>{g.pct}%</div>
+                        <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>{ceil1(g.pct)}%</div>
                       </div>
                     ))}
                   </div>

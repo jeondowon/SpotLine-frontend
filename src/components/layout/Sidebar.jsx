@@ -4,6 +4,7 @@ import { Ic } from '../ui/Icons'
 const NAV_ITEMS = [
   { id: "intro",     label: "소개",     ic: <Ic.Spark/>, to: "/intro",      badge: "DEMO" },
   { id: "dashboard", label: "대시보드", ic: <Ic.Dash/>,  to: "/dashboard" },
+  { id: "chat",      label: "AI 챗봇",  ic: <Ic.Chat/>,  to: "/chat",       badge: "AI" },
 ]
 
 const BOTTOM_ITEMS = [
@@ -18,6 +19,7 @@ export default function Sidebar() {
     if (id === "dashboard") return pathname === "/dashboard"
     if (id === "analytics") return pathname === "/analytics"
     if (id === "settings")  return pathname === "/settings"
+    if (id === "chat")      return pathname === "/chat"
     return false
   }
 

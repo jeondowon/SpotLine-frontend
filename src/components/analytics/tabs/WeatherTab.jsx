@@ -1,5 +1,6 @@
 import KPI from '../../ui/KPI'
 import { Ic } from '../../ui/Icons'
+import { ceil1 } from '../../../utils/format'
 
 function resultLabel(r) { return r === 'GOOD' ? '좋음' : r === 'BAD' ? '나쁨' : '보통' }
 function resultBg(r) {
@@ -20,7 +21,7 @@ function ValueBar({ label, value, max, color, pct }) {
     <div style={{display:'flex', flexDirection:'column', gap:4}}>
       <div style={{display:'flex', justifyContent:'space-between', fontSize:12}}>
         <span style={{color:'var(--muted)'}}>{label}</span>
-        <span style={{fontWeight:600, fontFamily:'JetBrains Mono, monospace'}}>{value?.toFixed(1)}</span>
+        <span style={{fontWeight:600, fontFamily:'JetBrains Mono, monospace'}}>{value != null ? ceil1(value) : undefined}</span>
       </div>
       <div style={{height:8, background:'#F1F3F6', borderRadius:99, overflow:'hidden'}}>
         <div style={{height:'100%', width:w+'%', background:color, borderRadius:99, transition:'width .4s'}}/>
@@ -28,7 +29,7 @@ function ValueBar({ label, value, max, color, pct }) {
       {pct != null && (
         <div style={{fontSize:11, color:'var(--muted)', textAlign:'right'}}>
           기대 대비 <span style={{fontWeight:600, color: pct >= 0 ? 'oklch(0.42 0.12 155)' : 'oklch(0.55 0.16 25)'}}>
-            {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+            {pct >= 0 ? '+' : ''}{ceil1(pct)}%
           </span>
         </div>
       )}
@@ -56,16 +57,16 @@ export default function WeatherTab({ data = {}, day }) {
                 iconBg={resultBg(weatherImpact.result)}
                 iconFg={resultFg(weatherImpact.result)}
                 value={resultLabel(weatherImpact.result)}
-                hint={`실제 ${weatherImpact.realValue?.toFixed(1)} / 기대 ${weatherImpact.expectValue?.toFixed(1)}`}/>
+                hint={`실제 ${weatherImpact.realValue != null ? ceil1(weatherImpact.realValue) : '—'} / 기대 ${weatherImpact.expectValue != null ? ceil1(weatherImpact.expectValue) : '—'}`}/>
               <KPI label="실제값"
                 icon={<Ic.Activity/>}
                 iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
-                value={weatherImpact.realValue?.toFixed(1) ?? '—'}
+                value={weatherImpact.realValue != null ? ceil1(weatherImpact.realValue) : '—'}
                 hint="날씨 영향 반영"/>
               <KPI label="보정값"
                 icon={<Ic.Trend/>}
                 iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
-                value={weatherImpact.adjustedValue?.toFixed(1) ?? '—'}
+                value={weatherImpact.adjustedValue != null ? ceil1(weatherImpact.adjustedValue) : '—'}
                 hint="날씨 영향 제거 후"/>
             </>
           ) : (
@@ -79,7 +80,7 @@ export default function WeatherTab({ data = {}, day }) {
               iconBg={resultBg(weekdayPattern.result)}
               iconFg={resultFg(weekdayPattern.result)}
               value={resultLabel(weekdayPattern.result)}
-              hint={`실제 ${weekdayPattern.realValue?.toFixed(1)} / 기대 ${weekdayPattern.expectValue?.toFixed(1)}`}/>
+              hint={`실제 ${weekdayPattern.realValue != null ? ceil1(weekdayPattern.realValue) : '—'} / 기대 ${weekdayPattern.expectValue != null ? ceil1(weekdayPattern.expectValue) : '—'}`}/>
           ) : (
             <KPI label="요일 패턴 분석" icon={<Ic.Clock/>}
               iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
@@ -157,7 +158,7 @@ export default function WeatherTab({ data = {}, day }) {
                           return (
                             <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
                               <div style={{fontSize:11, fontFamily:'JetBrains Mono', color:'var(--muted)', marginBottom:2}}>
-                                {b.value?.toFixed(1)}
+                                {b.value != null ? ceil1(b.value) : undefined}
                               </div>
                               <div style={{width:'100%', height:h, background:b.color, borderRadius:'4px 4px 0 0'}}/>
                               <div style={{fontSize:11, color:'var(--muted)', textAlign:'center', lineHeight:1.3}}>{b.label}</div>
@@ -169,7 +170,7 @@ export default function WeatherTab({ data = {}, day }) {
                         <div><span style={{color:'var(--muted)'}}>실제 vs 기대</span></div>
                         <div style={{textAlign:'right', fontWeight:600, fontFamily:'JetBrains Mono'}}>
                           {weatherImpact.expectValue > 0
-                            ? (((weatherImpact.realValue - weatherImpact.expectValue) / weatherImpact.expectValue) * 100).toFixed(1) + '%'
+                            ? ceil1(((weatherImpact.realValue - weatherImpact.expectValue) / weatherImpact.expectValue) * 100) + '%'
                             : '—'}
                         </div>
                       </div>
@@ -256,7 +257,7 @@ export default function WeatherTab({ data = {}, day }) {
                           return (
                             <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
                               <div style={{fontSize:12, fontFamily:'JetBrains Mono', color:'var(--muted)', marginBottom:2}}>
-                                {b.value?.toFixed(1)}
+                                {b.value != null ? ceil1(b.value) : undefined}
                               </div>
                               <div style={{width:'100%', height:h, background:b.color, borderRadius:'4px 4px 0 0'}}/>
                               <div style={{fontSize:11.5, color:'var(--muted)', textAlign:'center'}}>{b.label}</div>
@@ -270,7 +271,7 @@ export default function WeatherTab({ data = {}, day }) {
                           color: (weekdayPattern.realValue ?? 0) >= (weekdayPattern.expectValue ?? 0)
                             ? 'oklch(0.42 0.12 155)' : 'oklch(0.55 0.16 25)'
                         }}>
-                          {((weekdayPattern.realValue ?? 0) - (weekdayPattern.expectValue ?? 0)).toFixed(1)}
+                          {ceil1((weekdayPattern.realValue ?? 0) - (weekdayPattern.expectValue ?? 0))}
                         </div>
                       </div>
                     </div>

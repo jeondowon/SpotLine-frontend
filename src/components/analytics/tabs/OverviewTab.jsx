@@ -8,6 +8,7 @@ import GenderCard from '../GenderCard'
 import AgeCard from '../AgeCard'
 import WeekdayPatternCard from '../WeekdayPatternCard'
 import { HOURS } from '../../../data/analytics'
+import { ceil1 } from '../../../utils/format'
 
 function formatAge(a) {
   const m = { '00s':'유아', '10s':'10대', '20s':'20대', '30s':'30대', '40s':'40대', '50s':'50대', 'UNKNOWN':'연령미상' }
@@ -77,7 +78,7 @@ export default function OverviewTab({ data = {}, day }) {
             iconBg={weatherResult ? resultBg(weatherResult) : 'oklch(0.95 0.05 80)'}
             iconFg={weatherResult ? resultFg(weatherResult) : 'oklch(0.55 0.14 65)'}
             value={weatherResult ? resultLabel(weatherResult) : '—'}
-            hint={weatherImpact ? `실제 ${weatherImpact.realValue?.toFixed(1)} / 기대 ${weatherImpact.expectValue?.toFixed(1)}` : '데이터 없음'}/>
+            hint={weatherImpact ? `실제 ${weatherImpact.realValue != null ? ceil1(weatherImpact.realValue) : '—'} / 기대 ${weatherImpact.expectValue != null ? ceil1(weatherImpact.expectValue) : '—'}` : '데이터 없음'}/>
         </div>
       </div>
 

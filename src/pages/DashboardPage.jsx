@@ -13,6 +13,7 @@ import Heatmap from "../components/analytics/charts/Heatmap";
 import Donut from "../components/analytics/charts/Donut";
 import "../styles/analytics.css";
 import DatePicker from "../components/ui/DatePicker";
+import { ceil1 } from "../utils/format";
 import PremiumModal from "../components/ui/PremiumModal";
 import {
   TweaksPanel,
@@ -93,7 +94,12 @@ export default function DashboardPage() {
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [marketingLoading, setMarketingLoading] = useState(false);
-  const [day, setDay] = useState("2026-05-23");
+  const getLocalToday = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  };
+
+  const [day, setDay] = useState(getLocalToday);
 
   const today = new Date(day);
   const dateLabel = today.toLocaleDateString("ko-KR", {
@@ -116,8 +122,7 @@ export default function DashboardPage() {
 
   function todayRange() {
     const now = new Date();
-    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayDay = s.toISOString().slice(0, 10);
+    const todayDay = getLocalToday();
     return {
       startAt: `${todayDay}T00:00:00`,
       endAt: `${todayDay}T23:59:59`,
@@ -172,7 +177,7 @@ export default function DashboardPage() {
 
   // 2) 날짜 변경 시, 오직 4개 핵심 KPI 관련 API만 해당 날짜 하루 치 데이터로 교체 (나머지는 유지)
   useEffect(() => {
-    if (day === "2026-05-23" && state.data.visits) {
+    if (day === getLocalToday() && state.data.visits) {
       // 초기 오늘 날짜 데이터가 이미 로드 완료되었다면 불필요한 재호출 차단
       return;
     }
@@ -308,7 +313,7 @@ export default function DashboardPage() {
                   ? (typeof dailyVisits.totalVisits === "number"
                       ? (Number.isInteger(dailyVisits.totalVisits)
                           ? dailyVisits.totalVisits.toLocaleString()
-                          : dailyVisits.totalVisits.toFixed(1))
+                          : ceil1(dailyVisits.totalVisits))
                       : dailyVisits.totalVisits)
                   : "—"
               }
@@ -338,12 +343,12 @@ export default function DashboardPage() {
               iconFg={weatherMeta.iconFg}
               value={
                 weather
-                  ? `${((weather.realValue / weather.expectValue) * 100).toFixed(1)}%`
+                  ? `${ceil1((weather.realValue / weather.expectValue) * 100)}%`
                   : "—"
               }
               hint={
                 weather
-                  ? `${weatherMeta.text} · 기대 ${weather.expectValue?.toFixed(1)}명 대비`
+                  ? `${weatherMeta.text} · 기대 ${weather.expectValue != null ? ceil1(weather.expectValue) : '—'}명 대비`
                   : "날씨 영향 보정 후"
               }
             />
@@ -614,7 +619,7 @@ export default function DashboardPage() {
                             style={{ background: s.color }}
                           />
                           <span>{s.label}</span>
-                          <span className="v mono">{s.pct}%</span>
+                          <span className="v mono">{ceil1(s.pct)}%</span>
                         </div>
                       ))}
                       <div className="priv" style={{ marginTop: 6 }}>

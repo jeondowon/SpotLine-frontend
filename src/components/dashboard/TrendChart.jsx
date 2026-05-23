@@ -39,8 +39,12 @@ export default function TrendChart({ data, selectedDay }) {
   const n = slicedDate.length
 
   const allVals = slicedData.flat().filter(v => v != null && !isNaN(v))
-  const minY = allVals.length ? Math.max(0, Math.min(...allVals) * 0.9) : 0
-  const maxY = allVals.length ? Math.max(...allVals) * 1.1 : 100
+  const minRaw = allVals.length ? Math.min(...allVals) : 0
+  const maxRaw = allVals.length ? Math.max(...allVals) : 100
+  const spread = (maxRaw - minRaw) || maxRaw * 0.05 || 1
+  const pad = spread * 0.05
+  const minY = Math.max(0, minRaw - pad)
+  const maxY = maxRaw + pad
   const range = maxY - minY || 1
 
   const xi = i => PAD_L + (n > 1 ? i / (n - 1) : 0.5) * innerW

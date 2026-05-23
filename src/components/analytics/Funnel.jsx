@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { Ic } from '../ui/Icons'
 import { FUNNEL } from '../../data/analytics'
+import { ceil1 } from '../../utils/format'
 
 export default function Funnel() {
   const base = FUNNEL[0].count
@@ -24,7 +25,7 @@ export default function Funnel() {
               </div>
               <div className="num">
                 <div className="v">{s.count.toLocaleString()}</div>
-                <div className="p">{pct.toFixed(1)}% · 입구 대비</div>
+                <div className="p">{ceil1(pct)}% · 입구 대비</div>
               </div>
               <div className="funnel-bar">
                 <div style={{
@@ -33,7 +34,7 @@ export default function Funnel() {
                     ? "linear-gradient(90deg, oklch(0.7 0.13 25), oklch(0.62 0.18 25))"
                     : `linear-gradient(90deg, ${colors[i]}, var(--accent))`,
                 }}>
-                  {pct >= 18 && <span>{pct.toFixed(1)}%</span>}
+                  {pct >= 18 && <span>{ceil1(pct)}%</span>}
                 </div>
               </div>
             </div>
@@ -44,12 +45,12 @@ export default function Funnel() {
                   const drop = ((FUNNEL[i].count - FUNNEL[i + 1].count) / FUNNEL[i].count) * 100
                   if (FUNNEL[i + 1].neg) {
                     const lost = FUNNEL[1].count - FUNNEL[2].count
-                    return <span className="drop">이탈 {lost.toLocaleString()}명 ({((lost / FUNNEL[1].count) * 100).toFixed(1)}%)</span>
+                    return <span className="drop">이탈 {lost.toLocaleString()}명 ({ceil1((lost / FUNNEL[1].count) * 100)}%)</span>
                   }
                   return (
                     <>
-                      <span className="keep">유지 {(100 - drop).toFixed(1)}%</span>
-                      <span style={{color: "var(--muted-2)"}}>· 단계 이탈 {drop.toFixed(1)}%</span>
+                      <span className="keep">유지 {ceil1(100 - drop)}%</span>
+                      <span style={{color: "var(--muted-2)"}}>· 단계 이탈 {ceil1(drop)}%</span>
                     </>
                   )
                 })()}
