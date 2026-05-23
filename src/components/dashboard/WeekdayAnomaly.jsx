@@ -1,3 +1,7 @@
+import InfoTooltip from '../ui/InfoTooltip';
+
+const INFO_TEXT = '오늘이 같은 요일 평균과 비교해서 얼마나 특이한지 보여줘요.\n\n통계적으로 이상하게 많거나 적을 때 바로 알 수 있어요. ±2σ(표준편차 2배) 기준으로 상위 2.3% 또는 하위 2.3%에 들어오면 이상 신호로 판단해요.';
+
 const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 const RESULT_META = {
@@ -132,8 +136,9 @@ export default function WeekdayAnomaly({ weekday }) {
     return (
       <div className="card">
         <div className="card-h">
-          <h3>요일 이상 탐지 상세</h3>
+          <h3>오늘의 방문자 수</h3>
           <span className="sub">· {dowLabel}요일 기준 통계</span>
+          <div className="right"><InfoTooltip text={INFO_TEXT} /></div>
         </div>
         <div className="card-b">
           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}>
@@ -153,7 +158,7 @@ export default function WeekdayAnomaly({ weekday }) {
   return (
     <div className="card">
       <div className="card-h">
-        <h3>요일 이상 탐지 상세</h3>
+        <h3>오늘의 방문자 수</h3>
         <span className="sub">· {dowLabel}요일 기준 통계 (±2σ 룰)</span>
         <div className="right">
           <span
@@ -168,6 +173,7 @@ export default function WeekdayAnomaly({ weekday }) {
           >
             {m.label}
           </span>
+          <InfoTooltip text={INFO_TEXT} />
         </div>
       </div>
 

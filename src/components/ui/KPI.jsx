@@ -8,7 +8,7 @@ export default function KPI({ icon, iconBg, iconFg, label, value, unit, delta, s
       <div className="kpi-h">
         <div className="ico" style={{ background: iconBg, color: iconFg }}>{icon}</div>
         <div className="lbl">{label}</div>
-        <div className="info"><Ic.Info/></div>
+
       </div>
       <div className="kpi-val mono">
         {value}{unit && <span className="unit">{unit}</span>}
