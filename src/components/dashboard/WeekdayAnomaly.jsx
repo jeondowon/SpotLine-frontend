@@ -10,7 +10,7 @@ const RESULT_META = {
     label: "이상 증가",
     zone: "이상 증가 (상위 2.3%)",
     desc: (dow) =>
-      `이번 ${dow}요일은 통계적으로 이례적인 호황입니다. 무엇이 효과를 냈는지 기록해 두세요.`,
+      `이번 ${dow}요일은 이례적인 호황입니다. 효과 요인을 기록하세요.`,
     bg: "oklch(0.95 0.03 250)",
     ink: "oklch(0.48 0.16 250)",
     dot: "oklch(0.62 0.14 250)",
@@ -20,7 +20,7 @@ const RESULT_META = {
     label: "이상 감소",
     zone: "이상 감소 (하위 2.3%)",
     desc: (dow) =>
-      `이번 ${dow}요일은 통계적으로 이상하게 한산합니다. 원인을 점검해보세요. (경쟁 매장? 주변 행사?)`,
+      `이번 ${dow}요일은 이례적으로 한산합니다. 원인을 점검하세요.`,
     bg: "var(--bad-soft)",
     ink: "oklch(0.45 0.16 25)",
     dot: "var(--bad)",
@@ -29,12 +29,23 @@ const RESULT_META = {
   NORMAL: {
     label: "정상 범위",
     zone: "정상 범위 (±2σ 이내)",
-    desc: (dow) => `이번 ${dow}요일은 통계적 정상 범위 내에 있습니다.`,
+    desc: (dow) => `이번 ${dow}요일은 정상 범위입니다.`,
     bg: "var(--good-soft)",
     ink: "oklch(0.42 0.12 155)",
     dot: "var(--good)",
     barColor: "var(--good)",
   },
+};
+
+const INSIGHT_BOX_STYLE = {
+  height: 64,
+  padding: "10px 14px",
+  background: "var(--good-soft)",
+  borderRadius: 10,
+  fontSize: 13,
+  lineHeight: 1.45,
+  boxSizing: "border-box",
+  overflow: "hidden",
 };
 
 function meta(result) {
@@ -236,16 +247,12 @@ export default function WeekdayAnomaly({ weekday }) {
         {/* 해석 텍스트 */}
         <div
           style={{
-            padding: "12px 14px",
+            ...INSIGHT_BOX_STYLE,
             background: m.bg,
-            borderRadius: 10,
-            fontSize: 13,
             color: m.ink,
-            lineHeight: 1.65,
           }}
         >
-          <span style={{ fontWeight: 700 }}>{m.zone}</span>
-          <br />
+          <span style={{ display: "block", fontWeight: 700, marginBottom: 3 }}>{m.zone}</span>
           {m.desc(dowLabel)}
         </div>
       </div>
