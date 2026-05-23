@@ -1,69 +1,166 @@
 import { Ic } from "../ui/Icons";
 import InfoTooltip from "../ui/InfoTooltip";
 
-function genderLabel(g) {
-  if (g === "MAN" || g === "MALE") return "남성";
-  if (g === "WOMAN" || g === "FEMALE") return "여성";
+const RANK = ["①", "②", "③"];
+
+const RANK_COLORS = [
+  "oklch(0.78 0.14 85)",   // 금
+  "oklch(0.68 0.05 250)",  // 은
+  "oklch(0.70 0.10 55)",   // 동
+];
+
+function genderKr(g) {
+  if (g === "female") return "여성";
+  if (g === "male") return "남성";
   return "미상";
 }
 
-function ageLabel(a) {
-  if (!a || a === "UNKNOWN" || a === "unknown") return "연령미상";
+function ageKr(a) {
+  if (!a || a === "unknown") return "미상";
   return a.replace("s", "대");
 }
 
-export default function CoreCustomerProfile({ core }) {
-  const age = ageLabel(core?.age);
-  const gender = genderLabel(core?.gender);
-  const hasData = core && core.age !== "UNKNOWN" && core.gender !== "UNKNOWN";
+function compute(persons) {
+  if (!persons || persons.length === 0) return { ranked: [], summary: null };
+
+  const counts = {};
+  persons.forEach((p) => {
+    const key = `${p.gender}|${p.ageGroup}`;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  const total = persons.length;
+  const ranked = Object.entries(counts)
+    .map(([key, count]) => {
+      const [gender, ageGroup] = key.split("|");
+      return { gender, ageGroup, count, pct: (count / total) * 100 };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  // 상위 3개 중 지배적 성별 집계
+  const topPct = ranked.reduce((s, r) => s + r.pct, 0);
+  const genderTally = {};
+  ranked.forEach((r) => {
+    genderTally[r.gender] = (genderTally[r.gender] || 0) + 1;
+  });
+  const [dominantGender, dominantCount] = Object.entries(genderTally).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
+
+  return {
+    ranked,
+    maxPct: ranked[0]?.pct ?? 1,
+    summary: { gender: dominantGender, count: dominantCount, pct: topPct },
+  };
+}
+
+export default function CoreCustomerProfile({ persons }) {
+  const { ranked, maxPct, summary } = compute(persons);
 
   return (
     <div className="card">
       <div className="card-h">
         <h3>핵심 고객 프로파일</h3>
-        <span className="sub">· core-customers API 결과</span>
+        <span className="sub">· 성별 × 연령대 조합</span>
         <div className="right">
           <span className="chip" style={{ background: "var(--accent-soft)", color: "var(--accent-ink)" }}>대표 그룹</span>
           <InfoTooltip text={'오늘 매장을 가장 많이 방문한 핵심 고객 그룹이에요.\n\nVision AI가 성별과 연령대를 익명으로 추정해서 대표 그룹을 계산해요. 어떤 손님이 주로 오는지 파악해서 운영이나 마케팅에 참고할 수 있어요.'} />
         </div>
       </div>
 
-      <div className="card-b" style={{ padding: "20px 16px" }}>
-        {!core ? (
+      <div className="card-b">
+        {ranked.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}>
-            데이터를 불러오는 중입니다...
+            분석된 영상 데이터가 없습니다.
           </p>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* 세련된 성별/연령 표시 아이콘 배지 */}
-            <div style={{
-              width: 54, height: 54, borderRadius: 16,
-              background: hasData ? "oklch(0.95 0.04 155)" : "oklch(0.95 0.03 250)",
-              display: "grid", placeItems: "center",
-              color: hasData ? "oklch(0.42 0.12 155)" : "oklch(0.48 0.16 250)",
-              flexShrink: 0
-            }}>
-              <Ic.Users style={{ width: 24, height: 24 }} />
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {ranked.map((r, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {/* 순위 */}
+                  <div
+                    style={{
+                      width: 22,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: RANK_COLORS[i],
+                      flexShrink: 0,
+                      textAlign: "center",
+                    }}
+                  >
+                    {RANK[i]}
+                  </div>
+
+                  {/* 레이블 */}
+                  <div
+                    style={{
+                      width: 72,
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {ageKr(r.ageGroup)} {genderKr(r.gender)}
+                  </div>
+
+                  {/* 바 */}
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 7,
+                      background: "#F1F3F6",
+                      borderRadius: 99,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${(r.pct / maxPct) * 100}%`,
+                        background: RANK_COLORS[i],
+                        borderRadius: 99,
+                        transition: "width .6s ease",
+                      }}
+                    />
+                  </div>
+
+                  {/* 퍼센트 */}
+                  <div
+                    className="mono"
+                    style={{ width: 40, textAlign: "right", fontSize: 13, fontWeight: 600 }}
+                  >
+                    {r.pct.toFixed(1)}%
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{
-                fontSize: 20, fontWeight: 800, color: "var(--ink)",
-                letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 6
-              }}>
-                {age} {gender}
+            {/* 요약 */}
+            {summary && (
+              <div
+                style={{
+                  marginTop: 18,
+                  padding: "10px 12px",
+                  background: "var(--accent-soft)",
+                  borderRadius: 9,
+                  fontSize: 12.5,
+                  color: "var(--accent-ink)",
+                  lineHeight: 1.6,
+                }}
+              >
+                → {genderKr(summary.gender)} {summary.count}개 구간이 방문의{" "}
+                <strong>{summary.pct.toFixed(1)}%</strong> 차지
               </div>
-              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
-                {hasData ? "오늘 우리 매장을 가장 많이 방문한 핵심 연령/성별 그룹입니다." : "대표 고객 정보 수집 중이거나 정보가 미상입니다."}
-              </div>
+            )}
+
+            <div className="priv" style={{ marginTop: 14, fontSize: 11.5 }}>
+              <Ic.Shield color="#9AA3AF" />
+              Vision AI 익명 추정 통계입니다.
             </div>
-          </div>
+          </>
         )}
-
-        <div className="priv" style={{ marginTop: 20, fontSize: 11.5 }}>
-          <Ic.Shield color="#9AA3AF" />
-          Vision AI 익명 추정 통계입니다.
-        </div>
       </div>
     </div>
   );

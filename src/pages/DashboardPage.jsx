@@ -6,14 +6,13 @@ import TrendChart from "../components/dashboard/TrendChart";
 import KPI from "../components/ui/KPI";
 import { Ic } from "../components/ui/Icons";
 import CoreCustomerProfile from "../components/dashboard/CoreCustomerProfile";
+import TimeDemographics from "../components/dashboard/TimeDemographics";
 import WeatherPerformance from "../components/dashboard/WeatherPerformance";
 import WeekdayAnomaly from "../components/dashboard/WeekdayAnomaly";
 import PredictionDetail from "../components/dashboard/PredictionDetail";
 import Heatmap from "../components/analytics/charts/Heatmap";
 import Donut from "../components/analytics/charts/Donut";
 import "../styles/analytics.css";
-import DatePicker from "../components/ui/DatePicker";
-import PremiumModal from "../components/ui/PremiumModal";
 import {
   TweaksPanel,
   TweakSection,
@@ -32,7 +31,6 @@ import {
   fetchDailyBriefing,
   fetchRawAnalytics,
   fetchMarketingRecommendations,
-  fetchDailyVisits,
 } from "../api/index";
 
 const TWEAK_DEFAULTS = {
@@ -50,6 +48,17 @@ const AGE_KEYS = [
   { key: "age50s", label: "50대+" },
 ];
 
+function todayRange() {
+  const now = new Date();
+  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  return {
+    startAt: s.toISOString(),
+    endAt: now.toISOString(),
+    day: s.toISOString(),
+    dayOfWeek: (now.getDay() + 6) % 7,
+  };
+}
+
 function formatDwell(sec) {
   if (!sec) return "—";
   if (sec < 60) return `${Math.round(sec)}초`;
@@ -63,7 +72,7 @@ function genderLabel(g) {
 }
 
 function ageLabel(a) {
-  if (!a || a === "UNKNOWN" || a === "unknown") return "—";
+  if (!a) return "—";
   return a.replace("s", "대");
 }
 
@@ -90,12 +99,10 @@ function resultMeta(r) {
 export default function DashboardPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [state, setState] = useState({ data: {}, loading: true });
-  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [marketingLoading, setMarketingLoading] = useState(false);
-  const [day, setDay] = useState("2026-05-23");
 
-  const today = new Date(day);
+  const today = new Date();
   const dateLabel = today.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -103,55 +110,27 @@ export default function DashboardPage() {
     weekday: "long",
   });
 
-  const getSeedVideoId = (targetDay) => {
-    const start = new Date("2026-04-24");
-    const current = new Date(targetDay);
-    const diffTime = current - start;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays < 30) {
-      return diffDays + 1; // 1부터 30까지
-    }
-    return null;
-  };
-
-  function todayRange() {
-    const now = new Date();
-    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayDay = s.toISOString().slice(0, 10);
-    return {
-      startAt: `${todayDay}T00:00:00`,
-      endAt: `${todayDay}T23:59:59`,
-      day: todayDay,
-      dayOfWeek: (now.getDay() + 6) % 7,
-    };
-  }
-
   useEffect(() => {
     document.documentElement.style.setProperty("--accent", t.accent);
   }, [t.accent]);
 
-  // 1) 최초 마운트 시 오늘 날짜 기준으로 대시보드 전체 데이터를 한 번만 호출
   useEffect(() => {
-    const { startAt, endAt, day: todayDay, dayOfWeek } = todayRange();
+    const { startAt, endAt, day, dayOfWeek } = todayRange();
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     sixtyDaysAgo.setHours(0, 0, 0, 0);
     const videoId = localStorage.getItem("last_video_id");
-
-    setState((s) => ({ ...s, loading: true }));
-
     Promise.allSettled([
       fetchCoreCustomers(startAt, endAt),
       fetchHourlyPopulation(startAt, endAt),
-      fetchWeatherImpact(`${todayDay}T00:00:00`),
-      fetchWeekdayPatterns(`${todayDay}T00:00:00`, dayOfWeek),
+      fetchWeatherImpact(day),
+      fetchWeekdayPatterns(day, dayOfWeek),
       fetchVisitCount(sixtyDaysAgo.toISOString(), endAt),
       fetchTomorrowPrediction(),
       fetchNextWeekPrediction(),
       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
-      fetchDailyVisits(todayDay),
     ]).then(
-      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits]) => {
+      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw]) => {
         setState({
           loading: false,
           data: {
@@ -163,46 +142,14 @@ export default function DashboardPage() {
             tomorrow: tomorrow.status === "fulfilled" ? tomorrow.value : null,
             nextWeek: nextWeek.status === "fulfilled" ? nextWeek.value : null,
             raw: raw.status === "fulfilled" ? raw.value : null,
-            dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : null,
           },
         });
       },
     );
   }, []);
 
-  // 2) 날짜 변경 시, 오직 4개 핵심 KPI 관련 API만 해당 날짜 하루 치 데이터로 교체 (나머지는 유지)
-  useEffect(() => {
-    if (day === "2026-05-23" && state.data.visits) {
-      // 초기 오늘 날짜 데이터가 이미 로드 완료되었다면 불필요한 재호출 차단
-      return;
-    }
-
-    const startAt = `${day}T00:00:00`;
-    const endAt = `${day}T23:59:59`;
-    const seedVideoId = getSeedVideoId(day);
-    const videoId = seedVideoId || localStorage.getItem("last_video_id") || 1;
-
-    Promise.allSettled([
-      fetchCoreCustomers(startAt, endAt),
-      fetchWeatherImpact(`${day}T00:00:00`),
-      videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
-      fetchDailyVisits(day),
-    ]).then(([core, weather, raw, dailyVisits]) => {
-      setState((s) => ({
-        ...s,
-        data: {
-          ...s.data,
-          core: core.status === "fulfilled" ? core.value : s.data.core,
-          weather: weather.status === "fulfilled" ? weather.value : s.data.weather,
-          raw: raw.status === "fulfilled" ? raw.value : s.data.raw,
-          dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : s.data.dailyVisits,
-        },
-      }));
-    });
-  }, [day]);
-
   const { data, loading } = state;
-  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits } =
+  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw } =
     data;
 
   const [briefing, setBriefing] = useState(null);
@@ -234,13 +181,9 @@ export default function DashboardPage() {
 
   const weatherMeta = resultMeta(weather?.result);
 
-  const coreLabel = (() => {
-    if (!core) return "—";
-    const age = ageLabel(core.age);
-    const gender = genderLabel(core.gender);
-    const parts = [age, gender].filter(v => v !== "—");
-    return parts.length > 0 ? parts.join(" ") : "—";
-  })();
+  const coreLabel = core
+    ? `${ageLabel(core.age)} ${genderLabel(core.gender)}`
+    : "—";
 
   const ageGroups = AGE_KEYS.map(({ key, label }) => ({
     label,
@@ -256,17 +199,14 @@ export default function DashboardPage() {
       ];
     }
     const f = persons.filter((p) => p.gender === "female").length;
-    const fPct = Number(((f / persons.length) * 100).toFixed(1));
+    const fPct = Math.round((f / persons.length) * 100);
     return [
       { label: "여성", pct: fPct, color: "oklch(0.7 0.13 0)" },
-      { label: "남성", pct: Number((100 - fPct).toFixed(1)), color: "oklch(0.62 0.13 250)" },
+      { label: "남성", pct: 100 - fPct, color: "oklch(0.62 0.13 250)" },
     ];
   })();
 
 
-
-  const visitsTrend = visits?.data?.[0];
-  const visitCount = visitsTrend?.length > 0 ? Math.round(visitsTrend[visitsTrend.length - 1]) : null;
 
   return (
     <div className="app">
@@ -289,7 +229,6 @@ export default function DashboardPage() {
                     : "오늘 매장 인사이트를 확인하세요."}
                 </h1>
               </div>
-              <DatePicker day={day} setDay={setDay} />
             </div>
           </div>
 
@@ -300,17 +239,9 @@ export default function DashboardPage() {
               icon={<Ic.Users />}
               iconBg="oklch(0.95 0.03 250)"
               iconFg="oklch(0.48 0.16 250)"
-              value={
-                dailyVisits?.totalVisits != null
-                  ? (typeof dailyVisits.totalVisits === "number"
-                      ? (Number.isInteger(dailyVisits.totalVisits)
-                          ? dailyVisits.totalVisits.toLocaleString()
-                          : dailyVisits.totalVisits.toFixed(1))
-                      : dailyVisits.totalVisits)
-                  : "—"
-              }
-              unit={dailyVisits?.totalVisits != null ? "명" : ""}
-              hint="선택 날짜 기준"
+              value={raw?.summary?.totalVisitors ?? "—"}
+              unit={raw ? "명" : ""}
+              hint="분석된 영상 기준"
             />
             <KPI
               label="오늘 핵심 고객"
@@ -335,12 +266,12 @@ export default function DashboardPage() {
               iconFg={weatherMeta.iconFg}
               value={
                 weather
-                  ? `${((weather.realValue / weather.expectValue) * 100).toFixed(1)}%`
+                  ? `${Math.round((weather.realValue / weather.expectValue) * 100)}%`
                   : "—"
               }
               hint={
                 weather
-                  ? `${weatherMeta.text} · 기대 ${weather.expectValue?.toFixed(1)}명 대비`
+                  ? `${weatherMeta.text} · 기대 ${weather.expectValue}명 대비`
                   : "날씨 영향 보정 후"
               }
             />
@@ -357,7 +288,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="card-b" style={{ padding: "8px 12px 14px" }}>
-              <TrendChart data={visits} selectedDay={day} />
+              <TrendChart data={visits} />
             </div>
           </div>
 
@@ -390,7 +321,7 @@ export default function DashboardPage() {
 
             <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact />
 
-            <CoreCustomerProfile core={core} />
+            <CoreCustomerProfile persons={raw?.persons} />
           </div>
 
           {/* AI 일일 브리핑 + AI 마케팅 추천 */}
@@ -487,6 +418,9 @@ export default function DashboardPage() {
           </div>
 
 
+          {/* 시간대별 인구통계 변화 */}
+          <TimeDemographics persons={raw?.persons} />
+
           {/* PRO: 히트맵 + 성별 분포 */}
           <div className="grid-2">
             <div className="card" style={{ position: "relative" }}>
@@ -495,13 +429,11 @@ export default function DashboardPage() {
                 <span className="sub">· 방문자 밀도</span>
                 <div className="right">
                   <span
-                    onClick={() => setIsPremiumModalOpen(true)}
                     className="chip"
                     style={{
                       background: "oklch(0.92 0.06 290)",
                       color: "oklch(0.42 0.18 290)",
                       fontWeight: 700,
-                      cursor: "pointer"
                     }}
                   >
                     PRO
@@ -524,7 +456,6 @@ export default function DashboardPage() {
                   <Heatmap />
                 </div>
                 <div
-                  onClick={() => setIsPremiumModalOpen(true)}
                   style={{
                     position: "absolute",
                     inset: 0,
@@ -533,12 +464,7 @@ export default function DashboardPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    cursor: "pointer",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    transition: "background 0.2s"
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                 >
                   <Ic.Lock color="oklch(0.42 0.18 290)" />
                   <div
@@ -570,13 +496,11 @@ export default function DashboardPage() {
                 <span className="sub">· AI 추정 · 익명</span>
                 <div className="right">
                   <span
-                    onClick={() => setIsPremiumModalOpen(true)}
                     className="chip"
                     style={{
                       background: "oklch(0.92 0.06 290)",
                       color: "oklch(0.42 0.18 290)",
                       fontWeight: 700,
-                      cursor: "pointer"
                     }}
                   >
                     PRO
@@ -623,7 +547,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div
-                  onClick={() => setIsPremiumModalOpen(true)}
                   style={{
                     position: "absolute",
                     inset: 0,
@@ -632,12 +555,7 @@ export default function DashboardPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 8,
-                    cursor: "pointer",
-                    background: "rgba(255, 255, 255, 0.05)",
-                    transition: "background 0.2s"
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                 >
                   <Ic.Lock color="oklch(0.42 0.18 290)" />
                   <div
@@ -727,7 +645,6 @@ export default function DashboardPage() {
                 더욱 전문적인 분석을 기반으로 프리미엄이 해답을 찾아드릴게요.
               </p>
               <button
-                onClick={() => setIsPremiumModalOpen(true)}
                 style={{
                   alignSelf: "flex-start",
                   padding: "11px 20px",
@@ -840,7 +757,7 @@ export default function DashboardPage() {
               style={{ padding: "6px 4px 12px", fontSize: 12 }}
             >
               <Ic.Shield color="#9AA3AF" />본 대시보드는 Vision AI 기반 익명
-              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별은
+              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은
               수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
             </div>
           )}
@@ -863,9 +780,6 @@ export default function DashboardPage() {
           onChange={(v) => setTweak("showPrivacyBadge", v)}
         />
       </TweaksPanel>
-      {isPremiumModalOpen && (
-        <PremiumModal onClose={() => setIsPremiumModalOpen(false)} />
-      )}
     </div>
   );
 }
