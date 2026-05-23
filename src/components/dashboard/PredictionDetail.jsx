@@ -11,7 +11,7 @@ function parseNextWeek(nextWeek) {
 }
 
 function parseTomorrow(tomorrow) {
-  return tomorrow?.result?.expectedVisits ?? tomorrow?.result ?? null;
+  return tomorrow?.expectedVisits ?? null;
 }
 
 function StatBlock({ label, value, unit, sub, accent }) {

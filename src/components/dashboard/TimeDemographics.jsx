@@ -18,7 +18,9 @@ function ageLabel(a) {
   return a?.replace("s", "대") ?? "—";
 }
 function genderLabel(g) {
-  return g === "female" ? "여성" : "남성";
+  if (g === "female") return "여성";
+  if (g === "male") return "남성";
+  return "미상";
 }
 
 function compute(persons) {
@@ -28,12 +30,15 @@ function compute(persons) {
   const slotTotals = SLOTS.map(() => 0);
 
   persons.forEach((p) => {
-    const ts = p.entrance_event?.timestamp || p.timestamp || p.detected_at || p.first_seen_at || p.time;
+    const ts = p.firstSeen || p.entranceEvent?.timestamp;
     if (!ts) return;
-    const hour = new Date(ts).getHours();
+    // ts는 "HH:MM:SS.mmm" 형식의 영상 오프셋 — 절대 시각이 아니므로 시간대 분류 불가
+    const parts = ts.split(":");
+    if (parts.length < 2) return;
+    const hour = parseInt(parts[0], 10);
     const idx = SLOTS.findIndex((s) => hour >= s.start && hour < s.end);
     if (idx === -1) return;
-    const key = `${p.age_group}|${p.gender}`;
+    const key = `${p.ageGroup}|${p.gender}`;
     slotCounts[idx][key] = (slotCounts[idx][key] || 0) + 1;
     slotTotals[idx]++;
   });

@@ -60,7 +60,7 @@ function BarRow({ label, value, max, color }) {
   );
 }
 
-export default function WeatherPerformance({ weather, rain, temp }) {
+export default function WeatherPerformance({ weather }) {
   if (!weather) {
     return (
       <div className="card">
@@ -153,23 +153,12 @@ export default function WeatherPerformance({ weather, rain, temp }) {
           <BarRow label="기댓값" value={expectValue} max={maxVal} color="#CBD2DC" />
         </div>
 
-        {/* 조건 주석 */}
         <div
-          style={{
-            marginTop: 14,
-            fontSize: 12,
-            color: "var(--muted-2)",
-            display: "flex",
-            gap: 12,
-          }}
+          style={{ marginTop: 14, fontSize: 12, color: "var(--muted-2)", textAlign: "right" }}
         >
-          <span>기온 {temp}°C</span>
-          <span>강수량 {rain}mm</span>
-          <span style={{ marginLeft: "auto" }}>
-            실제 / 기대 ={" "}
-            <span className="mono" style={{ fontWeight: 600, color: m.ink }}>
-              {ratio}%
-            </span>
+          실제 / 기대 ={" "}
+          <span className="mono" style={{ fontWeight: 600, color: m.ink }}>
+            {ratio}%
           </span>
         </div>
       </div>

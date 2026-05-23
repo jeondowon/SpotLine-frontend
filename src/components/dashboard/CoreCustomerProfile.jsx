@@ -9,11 +9,14 @@ const RANK_COLORS = [
 ];
 
 function genderKr(g) {
-  return g === "female" ? "여성" : "남성";
+  if (g === "female") return "여성";
+  if (g === "male") return "남성";
+  return "미상";
 }
 
 function ageKr(a) {
-  return a?.replace("s", "대") ?? "—";
+  if (!a || a === "unknown") return "미상";
+  return a.replace("s", "대");
 }
 
 function compute(persons) {
@@ -21,7 +24,7 @@ function compute(persons) {
 
   const counts = {};
   persons.forEach((p) => {
-    const key = `${p.gender}|${p.age_group}`;
+    const key = `${p.gender}|${p.ageGroup}`;
     counts[key] = (counts[key] || 0) + 1;
   });
 

@@ -45,8 +45,8 @@ export async function fetchCoreCustomers(startAt, endAt) {
   return post('/api/v1/analytics/core-customers', { startAt, endAt })
 }
 
-export async function fetchWeatherImpact(day, rain, temp) {
-  return post('/api/v1/analytics/weather-impact', { day, rain, temp })
+export async function fetchWeatherImpact(day) {
+  return post('/api/v1/analytics/weather-impact', { day })
 }
 
 export async function fetchWeekdayPatterns(day, dayOfWeek) {

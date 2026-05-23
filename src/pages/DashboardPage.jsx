@@ -10,13 +10,13 @@ import WeatherPerformance from "../components/dashboard/WeatherPerformance";
 import WeekdayAnomaly from "../components/dashboard/WeekdayAnomaly";
 import PredictionDetail from "../components/dashboard/PredictionDetail";
 import Heatmap from "../components/analytics/charts/Heatmap";
+import Donut from "../components/analytics/charts/Donut";
 import "../styles/analytics.css";
 import {
   TweaksPanel,
   TweakSection,
   TweakColor,
   TweakToggle,
-  TweakNumber,
 } from "../components/ui/TweaksPanel";
 import { useTweaks } from "../hooks/useTweaks";
 import {
@@ -34,8 +34,6 @@ import {
 
 const TWEAK_DEFAULTS = {
   accent: "#3B7CF6",
-  rain: 0,
-  temp: 20,
   showPrivacyBadge: true,
 };
 
@@ -52,13 +50,10 @@ const AGE_KEYS = [
 function todayRange() {
   const now = new Date();
   const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const pad = (n) => String(n).padStart(2, "0");
-  const fmt = (d) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   return {
-    startAt: fmt(s),
-    endAt: fmt(now),
-    day: fmt(s),
+    startAt: s.toISOString(),
+    endAt: now.toISOString(),
+    day: s.toISOString(),
     dayOfWeek: (now.getDay() + 6) % 7,
   };
 }
@@ -120,27 +115,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const { startAt, endAt, day, dayOfWeek } = todayRange();
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    sixtyDaysAgo.setHours(0, 0, 0, 0);
     const videoId = localStorage.getItem("last_video_id");
     Promise.allSettled([
       fetchCoreCustomers(startAt, endAt),
       fetchHourlyPopulation(startAt, endAt),
-      fetchWeatherImpact(day, t.rain, t.temp),
+      fetchWeatherImpact(day),
       fetchWeekdayPatterns(day, dayOfWeek),
-      fetchVisitCount(startAt, endAt),
+      fetchVisitCount(sixtyDaysAgo.toISOString(), endAt),
       fetchTomorrowPrediction(),
       fetchNextWeekPrediction(),
       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
     ]).then(
-      ([
-        core,
-        hourly,
-        weather,
-        weekday,
-        visits,
-        tomorrow,
-        nextWeek,
-        raw,
-      ]) => {
+      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw]) => {
         setState({
           loading: false,
           data: {
@@ -156,19 +145,11 @@ export default function DashboardPage() {
         });
       },
     );
-  }, [t.rain, t.temp]);
+  }, []);
 
   const { data, loading } = state;
-  const {
-    core,
-    hourly,
-    weather,
-    weekday,
-    visits,
-    tomorrow,
-    nextWeek,
-    raw,
-  } = data;
+  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw } =
+    data;
 
   const [briefing, setBriefing] = useState(null);
   const [marketing, setMarketing] = useState(null);
@@ -208,8 +189,24 @@ export default function DashboardPage() {
     pct: hourly?.[key] ?? 0,
   }));
 
+  const genderSlices = (() => {
+    const persons = raw?.persons;
+    if (!persons || persons.length === 0) {
+      return [
+        { label: "여성", pct: 58, color: "oklch(0.7 0.13 0)" },
+        { label: "남성", pct: 42, color: "oklch(0.62 0.13 250)" },
+      ];
+    }
+    const f = persons.filter((p) => p.gender === "female").length;
+    const fPct = Math.round((f / persons.length) * 100);
+    return [
+      { label: "여성", pct: fPct, color: "oklch(0.7 0.13 0)" },
+      { label: "남성", pct: 100 - fPct, color: "oklch(0.62 0.13 250)" },
+    ];
+  })();
+
   const nextWeekArr = (nextWeek?.result ?? []).map((v) =>
-    typeof v === "object" ? (v?.expectedVisits ?? 0) : v
+    typeof v === "object" ? (v?.expectedVisits ?? 0) : v,
   );
   const maxNextWeek = Math.max(...nextWeekArr, 1);
 
@@ -244,7 +241,7 @@ export default function DashboardPage() {
               icon={<Ic.Users />}
               iconBg="oklch(0.95 0.03 250)"
               iconFg="oklch(0.48 0.16 250)"
-              value={raw?.summary?.total_visitors ?? "—"}
+              value={raw?.summary?.totalVisitors ?? "—"}
               unit={raw ? "명" : ""}
               hint="분석된 영상 기준"
             />
@@ -261,7 +258,7 @@ export default function DashboardPage() {
               icon={<Ic.Clock />}
               iconBg="oklch(0.95 0.04 155)"
               iconFg="oklch(0.42 0.12 155)"
-              value={formatDwell(raw?.summary?.avg_dwell_time_seconds)}
+              value={formatDwell(raw?.summary?.avgDwellTimeSeconds)}
               hint="분석된 영상 기준"
             />
             <KPI
@@ -282,62 +279,21 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* 기능 5·7: 방문 추세선 + 일일 브리핑 */}
-          <div className="grid-main">
-            <div className="card">
-              <div className="card-h">
-                <h3>방문 추세선</h3>
-                <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
-                <div className="right">
-                  <span className="chip dot">날씨 보정값</span>
-                </div>
-              </div>
-              <div className="card-b" style={{ padding: "8px 12px 14px" }}>
-                <TrendChart data={visits} />
+          {/* 방문 추세선 */}
+          <div className="card">
+            <div className="card-h">
+              <h3>방문 추세선</h3>
+              <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
+              <div className="right">
+                <span className="chip dot">날씨 보정값</span>
               </div>
             </div>
-
-            <div className="card">
-              <div className="card-h">
-                <span className="ai-h-badge">
-                  <Ic.Sparkle /> 일일 브리핑
-                </span>
-                <div className="right">
-                  <span className="chip">AI</span>
-                  <button
-                    className="gen-btn"
-                    onClick={generateBriefing}
-                    disabled={briefingLoading}
-                  >
-                    {briefingLoading ? "생성 중..." : "생성하기"}
-                  </button>
-                </div>
-              </div>
-              <div className="card-b">
-                {briefing?.message ? (
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13.5,
-                      lineHeight: 1.75,
-                      color: "var(--ink-2)",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {briefing.message}
-                  </p>
-                ) : (
-                  <p
-                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
-                  >
-                    {briefingLoading ? "생성 중..." : "생성하기 버튼을 눌러 AI 브리핑을 받아보세요."}
-                  </p>
-                )}
-              </div>
+            <div className="card-b" style={{ padding: "8px 12px 14px" }}>
+              <TrendChart data={visits} />
             </div>
           </div>
 
-          {/* 기능 2·6·8: 연령대 분포 + 다음 주 예측 + 마케팅 추천 */}
+          {/* 연령대 분포 + 다음 주 예측 + 핵심 고객 프로파일 */}
           <div className="grid-second">
             <div className="card">
               <div className="card-h">
@@ -425,6 +381,52 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            <CoreCustomerProfile persons={raw?.persons} />
+          </div>
+
+          {/* AI 일일 브리핑 + AI 마케팅 추천 */}
+          <div className="grid-2">
+            <div className="card">
+              <div className="card-h">
+                <span className="ai-h-badge">
+                  <Ic.Sparkle /> 일일 브리핑
+                </span>
+                <div className="right">
+                  <span className="chip">AI</span>
+                  <button
+                    className="gen-btn"
+                    onClick={generateBriefing}
+                    disabled={briefingLoading}
+                  >
+                    {briefingLoading ? "생성 중..." : "생성하기"}
+                  </button>
+                </div>
+              </div>
+              <div className="card-b">
+                {briefing?.message ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13.5,
+                      lineHeight: 1.75,
+                      color: "var(--ink-2)",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {briefing.message}
+                  </p>
+                ) : (
+                  <p
+                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
+                  >
+                    {briefingLoading
+                      ? "생성 중..."
+                      : "생성하기 버튼을 눌러 AI 브리핑을 받아보세요."}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="card">
               <div className="card-h">
                 <span className="ai-h-badge">
@@ -458,32 +460,18 @@ export default function DashboardPage() {
                   <p
                     style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
                   >
-                    {marketingLoading ? "생성 중..." : "생성하기 버튼을 눌러 AI 마케팅 추천을 받아보세요."}
+                    {marketingLoading
+                      ? "생성 중..."
+                      : "생성하기 버튼을 눌러 AI 마케팅 추천을 받아보세요."}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* 핵심 고객 프로파일 + 히트맵 */}
-          <div className="grid-2">
-            <CoreCustomerProfile persons={raw?.persons} />
-            <div className="card">
-              <div className="card-h">
-                <h3>요일 × 시간대 히트맵</h3>
-                <span className="sub">· 방문자 밀도</span>
-              </div>
-              <div className="card-b" style={{ padding: "16px 16px 14px" }}>
-                <div className="heat-wrap">
-                  <Heatmap />
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* 날씨 보정 성과 상세 + 요일 이상 탐지 상세 */}
           <div className="grid-2">
-            <WeatherPerformance weather={weather} rain={t.rain} temp={t.temp} />
+            <WeatherPerformance weather={weather} />
             <WeekdayAnomaly weekday={weekday} />
           </div>
 
@@ -492,6 +480,317 @@ export default function DashboardPage() {
 
           {/* 시간대별 인구통계 변화 */}
           <TimeDemographics persons={raw?.persons} />
+
+          {/* PRO: 히트맵 + 성별 분포 */}
+          <div className="grid-2">
+            <div className="card" style={{ position: "relative" }}>
+              <div className="card-h">
+                <h3>요일 × 시간대 히트맵</h3>
+                <span className="sub">· 방문자 밀도</span>
+                <div className="right">
+                  <span
+                    className="chip"
+                    style={{
+                      background: "oklch(0.92 0.06 290)",
+                      color: "oklch(0.42 0.18 290)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    PRO
+                  </span>
+                </div>
+              </div>
+              <div
+                className="card-b"
+                style={{ padding: "16px 16px 14px", position: "relative" }}
+              >
+                <div
+                  className="heat-wrap"
+                  style={{
+                    filter: "blur(3px)",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  <Heatmap />
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Ic.Lock color="oklch(0.42 0.18 290)" />
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "oklch(0.42 0.18 290)",
+                    }}
+                  >
+                    프리미엄 기능입니다
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    업그레이드하면 요일 × 시간대 패턴을 분석할 수 있습니다.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ position: "relative" }}>
+              <div className="card-h">
+                <h3>성별 추정 분포</h3>
+                <span className="sub">· AI 추정 · 익명</span>
+                <div className="right">
+                  <span
+                    className="chip"
+                    style={{
+                      background: "oklch(0.92 0.06 290)",
+                      color: "oklch(0.42 0.18 290)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    PRO
+                  </span>
+                </div>
+              </div>
+              <div className="card-b" style={{ position: "relative" }}>
+                <div
+                  style={{
+                    filter: "blur(3px)",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  <div className="donut-wrap">
+                    <Donut slices={genderSlices} label="전체" />
+                    <div className="donut-legend">
+                      {genderSlices.map((s) => (
+                        <div className="row" key={s.label}>
+                          <span
+                            className="sw"
+                            style={{ background: s.color }}
+                          />
+                          <span>{s.label}</span>
+                          <span className="v mono">{s.pct}%</span>
+                        </div>
+                      ))}
+                      <div className="priv" style={{ marginTop: 6 }}>
+                        <Ic.Shield color="#9AA3AF" />
+                        외관 기반 추정 · 얼굴 식별 없음
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Ic.Lock color="oklch(0.42 0.18 290)" />
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "oklch(0.42 0.18 290)",
+                    }}
+                  >
+                    프리미엄 기능입니다
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                    업그레이드하면 성별 분포를 분석할 수 있습니다.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 프리미엄 유도 배너 */}
+          <div
+            style={{
+              background: "var(--accent-soft)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius)",
+              boxShadow: "var(--shadow-sm)",
+              overflow: "hidden",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+            }}
+          >
+            {/* 왼쪽: 흰색 절반 */}
+            <div
+              style={{
+                background: "#fff",
+                padding: "32px 32px",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                  marginBottom: 10,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 26,
+                    fontWeight: 800,
+                    color: "var(--accent-ink)",
+                    lineHeight: 1,
+                  }}
+                >
+                  15
+                </span>
+                <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
+                  개의 잠긴 인사이트가 발견됐어요
+                </span>
+              </div>
+              <h2
+                style={{
+                  margin: "0 0 10px",
+                  fontSize: 21,
+                  fontWeight: 800,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.025em",
+                  lineHeight: 1.4,
+                }}
+              >
+                왜 어떤 날은 잘 되고,
+                <br />
+                어떤 날은 안 될까요?
+              </h2>
+              <p
+                style={{
+                  margin: "0 0 20px",
+                  fontSize: 13,
+                  color: "var(--muted)",
+                  lineHeight: 1.75,
+                }}
+              >
+                알림 기능, 구역별 체류 분석, 방문자 특성까지
+                <br />
+                더욱 전문적인 분석을 기반으로 프리미엄이 해답을 찾아드릴게요.
+              </p>
+              <button
+                style={{
+                  alignSelf: "flex-start",
+                  padding: "11px 20px",
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  color: "#fff",
+                  background: "var(--ink)",
+                  border: "none",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                프리미엄 시작하기 →
+              </button>
+            </div>
+
+            {/* 오른쪽: 하늘색 배경 위 티저 스탯 */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: 8,
+                padding: "16px 14px",
+              }}
+            >
+              {[
+                {
+                  icon: <Ic.Bell />,
+                  title: "혼잡 알림",
+                  sub: "임계치 초과 시 즉시 푸시 알림",
+                },
+                {
+                  icon: <Ic.Dash />,
+                  title: "구역별 체류 분석",
+                  sub: "진열대 앞 평균 체류 2.3배 ↑",
+                },
+                {
+                  icon: <Ic.Users />,
+                  title: "그룹 방문 비율",
+                  sub: "2인 이상 방문이 전체의 58%",
+                },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 14px",
+                    background: "#fff",
+                    borderRadius: 10,
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 9,
+                      flexShrink: 0,
+                      background: "var(--accent-soft)",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "var(--accent-ink)",
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "var(--ink)",
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        color: "var(--muted)",
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.sub}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 18,
+                      borderRadius: 6,
+                      flexShrink: 0,
+                      background: "var(--line-2)",
+                      filter: "blur(5px)",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
           {t.showPrivacyBadge && (
             <div
@@ -507,23 +806,6 @@ export default function DashboardPage() {
       </div>
 
       <TweaksPanel title="Tweaks">
-        <TweakSection label="날씨 (보정용)" />
-        <TweakNumber
-          label="강수량 (mm)"
-          value={t.rain}
-          min={0}
-          step={1}
-          onChange={(v) => setTweak("rain", v)}
-        />
-        <TweakNumber
-          label="기온 (°C)"
-          value={t.temp}
-          min={-20}
-          max={45}
-          step={1}
-          onChange={(v) => setTweak("temp", v)}
-        />
-
         <TweakSection label="비주얼" />
         <TweakColor
           label="액센트"
