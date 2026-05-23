@@ -388,67 +388,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card">
-              <div className="card-h">
-                <h3>다음 주 방문 예측(명)</h3>
-                <span className="sub">· 월 ~ 일</span>
-              </div>
-              <div className="card-b">
-                {nextWeekArr.length > 0 ? (
-                  <div
-                    style={{ display: "flex", flexDirection: "column", gap: 9 }}
-                  >
-                    {nextWeekArr.map((v, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "20px 1fr 36px",
-                          gap: 8,
-                          alignItems: "center",
-                          fontSize: 12.5,
-                        }}
-                      >
-                        <div
-                          style={{ color: "var(--muted)", textAlign: "right" }}
-                        >
-                          {DOW_LABELS[i]}
-                        </div>
-                        <div
-                          style={{
-                            height: 7,
-                            background: "#F1F3F6",
-                            borderRadius: 99,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              height: "100%",
-                              width: `${(v / maxNextWeek) * 100}%`,
-                              background: "var(--accent)",
-                              borderRadius: 99,
-                            }}
-                          />
-                        </div>
-                        <div
-                          className="mono"
-                          style={{ fontWeight: 600, textAlign: "right" }}
-                        >
-                          {v}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p
-                    style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}
-                  >
-                    {loading ? "불러오는 중..." : "예측 데이터가 없습니다."}
-                  </p>
-                )}
-              </div>
-            </div>
+            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact={true} />
 
             <CoreCustomerProfile core={core} />
           </div>
@@ -544,9 +484,6 @@ export default function DashboardPage() {
             <WeekdayAnomaly weekday={weekday} />
           </div>
 
-          {/* 단기 방문 예측 상세 */}
-          <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} />
-
           {/* PRO: 히트맵 + 성별 분포 */}
           <div className="grid-2">
             <div className="card" style={{ position: "relative" }}>
@@ -616,7 +553,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card" style={{ position: "relative" }}>
+            <div
+              className="card"
+              style={{
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <div className="card-h">
                 <h3>성별 추정 분포</h3>
                 <span className="sub">· AI 추정 · 익명</span>
@@ -635,7 +579,17 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <div className="card-b" style={{ position: "relative" }}>
+              <div
+                className="card-b"
+                style={{
+                  position: "relative",
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "12px",
+                }}
+              >
                 <div
                   style={{
                     filter: "blur(3px)",
@@ -643,8 +597,8 @@ export default function DashboardPage() {
                     userSelect: "none",
                   }}
                 >
-                  <div className="donut-wrap">
-                    <Donut slices={genderSlices} label="전체" />
+                  <div className="donut-wrap" style={{ gap: 100 }}>
+                    <Donut slices={genderSlices} label="전체" size={170} />
                     <div className="donut-legend">
                       {genderSlices.map((s) => (
                         <div className="row" key={s.label}>

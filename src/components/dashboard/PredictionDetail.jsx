@@ -1,3 +1,5 @@
+import InfoTooltip from '../ui/InfoTooltip';
+
 const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function todayDow() {
@@ -49,7 +51,7 @@ function StatBlock({ label, value, unit, sub, accent }) {
   );
 }
 
-export default function PredictionDetail({ tomorrow, nextWeek }) {
+export default function PredictionDetail({ tomorrow, nextWeek, compact = false }) {
   const tomorrowVal = parseTomorrow(tomorrow);
   const arr = parseNextWeek(nextWeek);
   const dow = todayDow();
@@ -71,49 +73,52 @@ export default function PredictionDetail({ tomorrow, nextWeek }) {
         <span className="sub">· 내일 · 다음 주 7일</span>
         <div className="right">
           <span className="chip">날씨 · 트렌드 반영</span>
+          <InfoTooltip text={'내일과 다음 주 7일의 방문자 수를 예측해요.\n\n최근 방문 트렌드와 날씨 예보, 요일 패턴을 모두 반영해서 계산해요. 인력 배치나 재고 준비에 활용해보세요.'} />
         </div>
       </div>
 
       <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         {/* 상단 3개 수치 */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
-            gap: 0,
-            border: "1px solid var(--line)",
-            borderRadius: 11,
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ padding: "14px 18px", background: "var(--accent-soft)" }}>
-            <StatBlock
-              label="내일 예측"
-              value={tomorrowVal ?? "—"}
-              unit={tomorrowVal != null ? "명" : ""}
-              sub={`다음 ${DOW_LABELS[tomorrowDow]}요일`}
-              accent
-            />
+        {!compact && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
+              gap: 0,
+              border: "1px solid var(--line)",
+              borderRadius: 11,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "14px 18px", background: "var(--accent-soft)" }}>
+              <StatBlock
+                label="내일 예측"
+                value={tomorrowVal ?? "—"}
+                unit={tomorrowVal != null ? "명" : ""}
+                sub={`다음 ${DOW_LABELS[tomorrowDow]}요일`}
+                accent
+              />
+            </div>
+            <div style={{ background: "var(--line)" }} />
+            <div style={{ padding: "14px 18px" }}>
+              <StatBlock
+                label="다음 주 최고"
+                value={hasData ? arr[peakDow] : "—"}
+                unit={hasData ? "명" : ""}
+                sub={hasData ? `${DOW_LABELS[peakDow]}요일` : ""}
+              />
+            </div>
+            <div style={{ background: "var(--line)" }} />
+            <div style={{ padding: "14px 18px" }}>
+              <StatBlock
+                label="주간 합계"
+                value={hasData ? weekTotal : "—"}
+                unit={hasData ? "명" : ""}
+                sub={hasData ? "다음 주 7일" : ""}
+              />
+            </div>
           </div>
-          <div style={{ background: "var(--line)" }} />
-          <div style={{ padding: "14px 18px" }}>
-            <StatBlock
-              label="다음 주 최고"
-              value={hasData ? arr[peakDow] : "—"}
-              unit={hasData ? "명" : ""}
-              sub={hasData ? `${DOW_LABELS[peakDow]}요일` : ""}
-            />
-          </div>
-          <div style={{ background: "var(--line)" }} />
-          <div style={{ padding: "14px 18px" }}>
-            <StatBlock
-              label="주간 합계"
-              value={hasData ? weekTotal : "—"}
-              unit={hasData ? "명" : ""}
-              sub={hasData ? "다음 주 7일" : ""}
-            />
-          </div>
-        </div>
+        )}
 
         {/* 7일 바 차트 */}
         {hasData ? (
@@ -124,7 +129,7 @@ export default function PredictionDetail({ tomorrow, nextWeek }) {
                 gridTemplateColumns: "repeat(7, 1fr)",
                 gap: 6,
                 alignItems: "flex-end",
-                height: 120,
+                height: compact ? 80 : 120,
               }}
             >
               {arr.map((v, i) => {
@@ -189,7 +194,7 @@ export default function PredictionDetail({ tomorrow, nextWeek }) {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          내일
+                    
                         </div>
                       )}
                     </div>
@@ -272,19 +277,21 @@ export default function PredictionDetail({ tomorrow, nextWeek }) {
         )}
 
         {/* 신뢰 구간 안내 */}
-        <div
-          style={{
-            padding: "10px 13px",
-            background: "#F7F9FC",
-            borderRadius: 9,
-            fontSize: 12,
-            color: "var(--muted)",
-            lineHeight: 1.6,
-          }}
-        >
-          신뢰 구간(±1.5σ) 표시는 백엔드에서 σ_dow 값을 내려줘야 활성화됩니다.
-          현재는 요일·날씨·트렌드 반영 최종 예측값만 표시합니다.
-        </div>
+        {!compact && (
+          <div
+            style={{
+              padding: "10px 13px",
+              background: "#F7F9FC",
+              borderRadius: 9,
+              fontSize: 12,
+              color: "var(--muted)",
+              lineHeight: 1.6,
+            }}
+          >
+            신뢰 구간(±1.5σ) 표시는 백엔드에서 σ_dow 값을 내려줘야 활성화됩니다.
+            현재는 요일·날씨·트렌드 반영 최종 예측값만 표시합니다.
+          </div>
+        )}
       </div>
     </div>
   );

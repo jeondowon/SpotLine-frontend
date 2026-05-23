@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
+import RawPage from './pages/RawPage'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/analytics" element={<AnalyticsPage/>}/>
         <Route path="/reports" element={<ReportsPage/>}/>
         <Route path="/settings" element={<SettingsPage/>}/>
+        <Route path="/raw" element={<RawPage/>}/>
         <Route path="*" element={<Navigate to="/intro" replace/>}/>
       </Routes>
     </BrowserRouter>

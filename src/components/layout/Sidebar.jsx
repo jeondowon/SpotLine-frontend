@@ -14,7 +14,7 @@ export default function Sidebar() {
   const { pathname } = useLocation()
 
   const isActive = id => {
-    if (id === "intro")     return pathname === "/"
+    if (id === "intro")     return pathname === "/intro" || pathname === "/"
     if (id === "dashboard") return pathname === "/dashboard"
     if (id === "analytics") return pathname === "/analytics"
     if (id === "settings")  return pathname === "/settings"
@@ -23,7 +23,7 @@ export default function Sidebar() {
 
   return (
     <aside className="sb">
-      <Link to="/" className="sb-brand" style={{textDecoration:"none", color:"inherit"}}>
+      <Link to="/intro" className="sb-brand" style={{textDecoration:"none", color:"inherit"}}>
         <div className="sb-mark" aria-hidden="true"></div>
         <div>
           <div className="sb-name">Spotline</div>

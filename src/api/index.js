@@ -17,15 +17,22 @@ async function get(path) {
 }
 
 // 영상
-export async function uploadVideo(file, startAt, endAt) {
+export async function uploadVideo(file) {
+  const today = new Date().toISOString().slice(0, 10)
   const formData = new FormData()
   formData.append('file', file)
-  const res = await fetch(`${BASE}/api/v1/video?startAt=${startAt}&endAt=${endAt}`, {
+  const res = await fetch(`${BASE}/api/v1/video?startAt=${today}T00:00:00&endAt=${today}T23:59:59`, {
     method: 'POST',
     body: formData,
   })
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
+}
+
+export async function fetchVideoDownload(id) {
+  const res = await fetch(`${BASE}/api/v1/video/${id}`)
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res
 }
 
 export async function fetchVideoStatus(id) {
@@ -71,4 +78,13 @@ export async function fetchDailyBriefing() {
 
 export async function fetchMarketingRecommendations() {
   return post('/api/v1/analytics/marketing-recommendations')
+}
+
+export async function fetchDailyVisits(date) {
+  return get(`/api/v1/analytics/visits/daily?date=${date}`)
+}
+
+// AI 챗봇
+export async function sendChatMessage(message, videoId, context) {
+  return post('/api/v1/ai/chat', { message, videoId, context })
 }

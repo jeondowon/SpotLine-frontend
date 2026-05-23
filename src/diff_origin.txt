@@ -1,0 +1,3529 @@
+diff --git a/package-lock.json b/package-lock.json
+index cb54c99..35e3a94 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1129,9 +1129,6 @@
+         "arm"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1146,9 +1143,6 @@
+         "arm"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1163,9 +1157,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1180,9 +1171,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1197,9 +1185,6 @@
+         "loong64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1214,9 +1199,6 @@
+         "loong64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1231,9 +1213,6 @@
+         "ppc64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1248,9 +1227,6 @@
+         "ppc64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1265,9 +1241,6 @@
+         "riscv64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1282,9 +1255,6 @@
+         "riscv64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1299,9 +1269,6 @@
+         "s390x"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1316,9 +1283,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1333,9 +1297,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+diff --git a/src/App.jsx b/src/App.jsx
+index 8eb9f9b..c2304ff 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage'
+ import AnalyticsPage from './pages/AnalyticsPage'
+ import ReportsPage from './pages/ReportsPage'
+ import SettingsPage from './pages/SettingsPage'
++import RawPage from './pages/RawPage'
+ 
+ export default function App() {
+   return (
+@@ -15,6 +16,7 @@ export default function App() {
+         <Route path="/analytics" element={<AnalyticsPage/>}/>
+         <Route path="/reports" element={<ReportsPage/>}/>
+         <Route path="/settings" element={<SettingsPage/>}/>
++        <Route path="/raw" element={<RawPage/>}/>
+         <Route path="*" element={<Navigate to="/intro" replace/>}/>
+       </Routes>
+     </BrowserRouter>
+diff --git a/src/api/index.js b/src/api/index.js
+index 5001ed2..0fd8d4d 100644
+--- a/src/api/index.js
++++ b/src/api/index.js
+@@ -17,10 +17,11 @@ async function get(path) {
+ }
+ 
+ // 영상
+-export async function uploadVideo(file, startAt, endAt) {
++export async function uploadVideo(file) {
++  const today = new Date().toISOString().slice(0, 10)
+   const formData = new FormData()
+   formData.append('file', file)
+-  const res = await fetch(`${BASE}/api/v1/video?startAt=${startAt}&endAt=${endAt}`, {
++  const res = await fetch(`${BASE}/api/v1/video?startAt=${today}T00:00:00&endAt=${today}T23:59:59`, {
+     method: 'POST',
+     body: formData,
+   })
+@@ -28,6 +29,12 @@ export async function uploadVideo(file, startAt, endAt) {
+   return res.json()
+ }
+ 
++export async function fetchVideoDownload(id) {
++  const res = await fetch(`${BASE}/api/v1/video/${id}`)
++  if (!res.ok) throw new Error(`API ${res.status}`)
++  return res
++}
++
+ export async function fetchVideoStatus(id) {
+   return get(`/api/v1/video/${id}/status`)
+ }
+@@ -72,3 +79,12 @@ export async function fetchDailyBriefing() {
+ export async function fetchMarketingRecommendations() {
+   return post('/api/v1/analytics/marketing-recommendations')
+ }
++
++export async function fetchDailyVisits(date) {
++  return get(`/api/v1/analytics/visits/daily?date=${date}`)
++}
++
++// AI 챗봇
++export async function sendChatMessage(message, videoId, context) {
++  return post('/api/v1/ai/chat', { message, videoId, context })
++}
+diff --git a/src/components/analytics/AgeCard.jsx b/src/components/analytics/AgeCard.jsx
+index 5e71c7e..b1d18d4 100644
+--- a/src/components/analytics/AgeCard.jsx
++++ b/src/components/analytics/AgeCard.jsx
+@@ -1,15 +1,28 @@
+ import { AGE_GROUPS } from '../../data/analytics'
+ 
+-export default function AgeCard({ title = "연령대 추정 분포" }) {
++function parseAgeGroups(raw) {
++  if (!raw) return AGE_GROUPS
++  return [
++    { label: '10대 이하', pct: (raw.age00s ?? 0) + (raw.age10s ?? 0) },
++    { label: '20–29',    pct: raw.age20s ?? 0 },
++    { label: '30–39',    pct: raw.age30s ?? 0 },
++    { label: '40–49',    pct: raw.age40s ?? 0 },
++    { label: '50대+',    pct: raw.age50s ?? 0 },
++  ]
++}
++
++export default function AgeCard({ title = "연령대 추정 분포", ageData }) {
++  const groups = parseAgeGroups(ageData)
+   return (
+     <div className="card">
+       <div className="card-h">
+         <h3>{title}</h3>
+         <span className="sub">· AI 추정 · 익명</span>
++        {ageData && <div className="right"><span className="chip dot">실시간</span></div>}
+       </div>
+       <div className="card-b">
+         <div className="ages">
+-          {AGE_GROUPS.map(a => (
++          {groups.map(a => (
+             <div className="age-row" key={a.label}>
+               <div className="l mono">{a.label}</div>
+               <div className="track"><div className="fill" style={{width: a.pct + "%"}}/></div>
+diff --git a/src/components/analytics/Funnel.jsx b/src/components/analytics/Funnel.jsx
+index b05ff62..7ac28fa 100644
+--- a/src/components/analytics/Funnel.jsx
++++ b/src/components/analytics/Funnel.jsx
+@@ -33,7 +33,7 @@ export default function Funnel() {
+                     ? "linear-gradient(90deg, oklch(0.7 0.13 25), oklch(0.62 0.18 25))"
+                     : `linear-gradient(90deg, ${colors[i]}, var(--accent))`,
+                 }}>
+-                  {pct >= 18 && <span>{pct.toFixed(0)}%</span>}
++                  {pct >= 18 && <span>{pct.toFixed(1)}%</span>}
+                 </div>
+               </div>
+             </div>
+diff --git a/src/components/analytics/PageHead.jsx b/src/components/analytics/PageHead.jsx
+index da3a5aa..5d4640e 100644
+--- a/src/components/analytics/PageHead.jsx
++++ b/src/components/analytics/PageHead.jsx
+@@ -1,13 +1,6 @@
+ import { Ic } from '../ui/Icons'
+ 
+-const RANGES = [
+-  { v: "today",  l: "오늘" },
+-  { v: "7d",     l: "7일" },
+-  { v: "30d",    l: "30일" },
+-  { v: "custom", l: "사용자 지정" },
+-]
+-
+-export default function PageHead({ range, setRange }) {
++export default function PageHead({ day }) {
+   return (
+     <div className="content" style={{paddingBottom: 0}}>
+       <div className="an-head">
+@@ -16,17 +9,6 @@ export default function PageHead({ range, setRange }) {
+           <p>매장 고객 행동에서 어떤 패턴이 발견되는지 깊이 있게 살펴보세요. · Vision AI 익명 집계 데이터</p>
+         </div>
+         <div className="right">
+-          <div className="range-pills">
+-            {RANGES.map(o => (
+-              <button key={o.v} className={range === o.v ? "on" : ""} onClick={() => setRange(o.v)}>{o.l}</button>
+-            ))}
+-          </div>
+-          <div className="date-pick">
+-            <Ic.Cal color="#6B7280"/>
+-            <span className="mono" style={{fontSize: 12}}>2026.04.17 – 05.16</span>
+-            <Ic.Chevron color="#9AA3AF"/>
+-          </div>
+-          <button className="btn-secondary"><Ic.Compare/> 비교</button>
+           <button className="btn-secondary"><Ic.Download/> 내보내기</button>
+         </div>
+       </div>
+diff --git a/src/components/analytics/TabBar.jsx b/src/components/analytics/TabBar.jsx
+index 48123ef..f86e279 100644
+--- a/src/components/analytics/TabBar.jsx
++++ b/src/components/analytics/TabBar.jsx
+@@ -1,16 +1,19 @@
+ import { TABS } from '../../data/analytics'
++import DatePicker from '../ui/DatePicker'
+ 
+ const TAB_COUNTS = { overview: null, visitors: "8", stay: "5", funnel: "4", weather: "4" }
+ 
+-export default function TabBar({ value, onChange }) {
++export default function TabBar({ value, onChange, day, setDay }) {
+   return (
+-    <div className="tabs">
++    <div className="tabs" style={{ gap: 0 }}>
+       {TABS.map(t => (
+         <button key={t.id} className={"tab" + (value === t.id ? " on" : "")} onClick={() => onChange(t.id)}>
+           {t.label}
+           {TAB_COUNTS[t.id] && <span className="ct">{TAB_COUNTS[t.id]}</span>}
+         </button>
+       ))}
++      {day && setDay && <DatePicker day={day} setDay={setDay}/>}
+     </div>
+   )
+ }
++
+diff --git a/src/components/analytics/charts/DailyBars.jsx b/src/components/analytics/charts/DailyBars.jsx
+index 717bdb7..459bac9 100644
+--- a/src/components/analytics/charts/DailyBars.jsx
++++ b/src/components/analytics/charts/DailyBars.jsx
+@@ -1,7 +1,9 @@
+ import { DAYS_30 } from '../../../data/analytics'
+ 
+-export default function DailyBars({ days = 30 }) {
+-  const data = DAYS_30.slice(-days)
++export default function DailyBars({ days = 30, visits }) {
++  const useReal = visits && visits.date?.length > 0 && visits.data?.[0]?.length > 0
++  const data = useReal ? visits.data[0] : DAYS_30.slice(-days)
++  const dates = useReal ? visits.date : null
+   const max = Math.max(...data)
+ 
+   const W = 480, H = 260
+@@ -9,10 +11,23 @@ export default function DailyBars({ days = 30 }) {
+   const innerW = W - PAD_L - PAD_R
+   const innerH = H - PAD_T - PAD_B
+   const baseY = PAD_T + innerH
+-
+   const barW = innerW / data.length
+   const gap = Math.max(2, barW * 0.22)
+ 
++  function getLabel(i) {
++    if (useReal) {
++      const d = new Date(dates[i])
++      const showIdx = i === 0 || i === data.length - 1 || (data.length > 10 && i === Math.floor(data.length / 2))
++      if (!showIdx) return null
++      return `${d.getMonth() + 1}/${d.getDate()}`
++    }
++    const isToday = i === data.length - 1
++    if (i === 0) return `${days}일전`
++    if (isToday) return '오늘'
++    if (i === Math.floor(days / 2)) return `${days - i}일전`
++    return null
++  }
++
+   return (
+     <svg
+       viewBox={`0 0 ${W} ${H}`}
+@@ -20,54 +35,24 @@ export default function DailyBars({ days = 30 }) {
+       style={{ width: "100%", height: "100%", display: "block", minHeight: 180 }}
+     >
+       <line x1={PAD_L} x2={W - PAD_R} y1={baseY} y2={baseY} stroke="#ECEEF2" strokeWidth="1"/>
+-
+       {data.map((v, i) => {
+-        const isToday = i === data.length - 1
+-        const dayOfWeek = (i + 1) % 7
+-        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6
+-
++        const isLast = i === data.length - 1
+         const barH = Math.max(3, (v / max) * innerH)
+         const x = PAD_L + i * barW + gap / 2
+         const y = baseY - barH
+         const w = barW - gap
+-
+-        const fill = isToday
+-          ? "oklch(0.62 0.13 250)"
+-          : isWeekend
+-          ? "oklch(0.68 0.13 295)"
+-          : "var(--accent)"
+-
+-        const showLbl = i === 0 || i === Math.floor(days / 2) || isToday
+-        const lblText = i === 0 ? `${days}일전` : isToday ? "오늘" : `${days - i}일전`
+-
++        const fill = isLast ? "oklch(0.62 0.13 250)" : "var(--accent)"
++        const lbl = getLabel(i)
+         return (
+           <g key={i}>
+-            <rect
+-              x={x} y={y} width={w} height={barH}
+-              rx={Math.min(3, w / 3)}
+-              fill={fill}
+-              opacity={isToday ? 1 : 0.72}
+-            />
+-            {isToday && (
+-              <text
+-                x={x + w / 2} y={y - 6}
+-                fontSize="11" textAnchor="middle"
+-                fill="oklch(0.62 0.13 250)"
+-                fontFamily="JetBrains Mono, monospace"
+-                fontWeight="700"
+-              >
+-                {v}
+-              </text>
++            <rect x={x} y={y} width={w} height={barH} rx={Math.min(3, w / 3)} fill={fill} opacity={isLast ? 1 : 0.72}/>
++            {isLast && (
++              <text x={x + w / 2} y={y - 6} fontSize="11" textAnchor="middle"
++                fill="oklch(0.62 0.13 250)" fontFamily="JetBrains Mono, monospace" fontWeight="700">{v}</text>
+             )}
+-            {showLbl && (
+-              <text
+-                x={x + w / 2} y={H - 8}
+-                fontSize="10" textAnchor="middle"
+-                fill="#9AA3AF"
+-                fontFamily="JetBrains Mono, monospace"
+-              >
+-                {lblText}
+-              </text>
++            {lbl && (
++              <text x={x + w / 2} y={H - 8} fontSize="10" textAnchor="middle"
++                fill="#9AA3AF" fontFamily="JetBrains Mono, monospace">{lbl}</text>
+             )}
+           </g>
+         )
+diff --git a/src/components/analytics/charts/Scatter.jsx b/src/components/analytics/charts/Scatter.jsx
+index bde217c..db396b4 100644
+--- a/src/components/analytics/charts/Scatter.jsx
++++ b/src/components/analytics/charts/Scatter.jsx
+@@ -32,7 +32,7 @@ export default function Scatter() {
+       {SCATTER_PTS.map((p, i) => (
+         <circle key={i} cx={x(p[0])} cy={y(p[1])} r="5" fill={colors[p[2]]} opacity="0.85" stroke="#fff" strokeWidth="1.5"/>
+       ))}
+-      <text x={W - PAD_R - 2} y={y(ly2) - 6} fontSize="10.5" textAnchor="end" fill="var(--accent-ink)" fontWeight="600" fontFamily="JetBrains Mono">상관계수 r = 0.78</text>
++      <text x={W - PAD_R - 2} y={y(ly2) - 6} fontSize="10.5" textAnchor="end" fill="var(--accent-ink)" fontWeight="600" fontFamily="JetBrains Mono">상관계수 r = 0.8</text>
+     </svg>
+   )
+ }
+diff --git a/src/components/analytics/tabs/OverviewTab.jsx b/src/components/analytics/tabs/OverviewTab.jsx
+index 16f63a6..1a96d44 100644
+--- a/src/components/analytics/tabs/OverviewTab.jsx
++++ b/src/components/analytics/tabs/OverviewTab.jsx
+@@ -1,100 +1,150 @@
+ import KPI from '../../ui/KPI'
+ import { Ic } from '../../ui/Icons'
+-import HoursChart from '../charts/HoursChart'
++import VisitTrendChart from '../charts/VisitTrendChart'
+ import DailyBars from '../charts/DailyBars'
+ import Heatmap from '../charts/Heatmap'
+ import Histogram from '../charts/Histogram'
+-import Scatter from '../charts/Scatter'
+ import GenderCard from '../GenderCard'
+ import AgeCard from '../AgeCard'
+-import Funnel from '../Funnel'
+-import WeatherCorrTable from '../WeatherCorrTable'
++import WeekdayPatternCard from '../WeekdayPatternCard'
+ import { HOURS } from '../../../data/analytics'
+ 
+-export default function OverviewTab() {
++function formatAge(a) {
++  const m = { '00s':'유아', '10s':'10대', '20s':'20대', '30s':'30대', '40s':'40대', '50s':'50대', 'UNKNOWN':'연령미상' }
++  return m[a] ?? a ?? '연령미상'
++}
++function formatGender(g) {
++  if (g === 'MAN') return '남성'
++  if (g === 'WOMAN') return '여성'
++  return '성별미상'
++}
++function resultLabel(r) { return r === 'GOOD' ? '좋음' : r === 'BAD' ? '나쁨' : '보통' }
++function resultBg(r) {
++  return r === 'GOOD' ? 'oklch(0.95 0.04 155)' : r === 'BAD' ? 'oklch(0.95 0.04 25)' : 'oklch(0.95 0.05 80)'
++}
++function resultFg(r) {
++  return r === 'GOOD' ? 'oklch(0.42 0.12 155)' : r === 'BAD' ? 'oklch(0.55 0.16 25)' : 'oklch(0.55 0.14 65)'
++}
++
++export default function OverviewTab({ data = {}, day }) {
++  const { coreCustomer, weatherImpact, weekdayPatterns, tomorrow, nextWeek, ageGroups: ageData, visits, loading } = data
++
++  // 오늘 방문자: visits/count 마지막 데이터 포인트 (선택 날짜 기준)
++  const visitsTrend = visits?.data?.[0]
++  const visitCount  = visitsTrend?.length > 0 ? Math.round(visitsTrend[visitsTrend.length - 1]) : null
++  const visitSpark  = visitsTrend?.slice(-14) ?? null
++
++  const coreLabel = coreCustomer ? formatAge(coreCustomer.age) : '—'
++  const coreHint  = coreCustomer ? `${formatGender(coreCustomer.gender)} · AI 분석` : 'AI 분석 · 당일'
++
++  const weatherResult = weatherImpact?.result
++
++  const jsDay = day ? new Date(day).getDay() : -1
++  const todayIdx = jsDay === 0 ? 6 : jsDay - 1
++  const todayWeekday = weekdayPatterns?.[todayIdx]
++
++  const tomorrowVal = tomorrow?.expectedVisits
++  const nextWeekData = nextWeek?.result ?? []
++
+   return (
+     <div className="tab-pane" style={{display:"flex", flexDirection:"column", gap: 20}}>
+-      {/* KPI 요약 */}
++
++      {/* KPI 요약 — 4개 */}
+       <div>
+-        <div className="section-h"><h2>핵심 분석 요약</h2><span className="sub">· 최근 30일</span><span className="meta">기준일 2026.05.16</span></div>
+-        <div className="kpi-scroll-wrap">
+-          <div className="kpis-6">
+-            <KPI className="compact" label="총 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
+-                 value="11,238" unit="명" delta={9.2}/>
+-            <KPI className="compact" label="평균 체류 시간" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
+-                 value="23분" delta={4.2} hint="이전 30일 대비"/>
+-            <KPI className="compact" label="입구→계산대 전환율" icon={<Ic.Trend/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+-                 value="33.7" unit="%" delta={1.6}/>
+-            <KPI className="compact" label="가장 방문 많은 시간대" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
+-                 value="19시" hint="시간당 평균 124명"/>
+-            <KPI className="compact" label="주요 방문 연령대" icon={<Ic.Users/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+-                 value="20대" hint="전체의 38% · AI 추정"/>
+-            <KPI className="compact" label="날씨 영향도" icon={<Ic.Sun/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
+-                 value="높음" hint={<span>상관계수 <b className="mono">0.78</b></span>}/>
+-          </div>
++        <div className="section-h">
++          <h2>하루 핵심 지표</h2>
++          <span className="sub">· {day}</span>
++          <span className="meta">{loading ? '로딩 중…' : 'API 데이터'}</span>
++        </div>
++        <div className="kpis" style={{marginTop:10}}>
++          <KPI label="오늘 방문자"
++            icon={<Ic.Users/>}
++            iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
++            value={visitCount != null ? visitCount.toLocaleString() : '—'}
++            unit={visitCount != null ? '명' : ''}
++            hint="5일 이동평균 · visits/count"
++            spark={visitSpark} sparkColor="oklch(0.62 0.14 250)"/>
++          <KPI label="핵심 고객"
++            icon={<Ic.Users/>}
++            iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
++            value={coreLabel} hint={coreHint}/>
++          <KPI label="오늘 평균 체류"
++            icon={<Ic.Clock/>}
++            iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
++            value="—" hint="집계 API 미제공"/>
++          <KPI label="날씨 보정 성과"
++            icon={<Ic.Sun/>}
++            iconBg={weatherResult ? resultBg(weatherResult) : 'oklch(0.95 0.05 80)'}
++            iconFg={weatherResult ? resultFg(weatherResult) : 'oklch(0.55 0.14 65)'}
++            value={weatherResult ? resultLabel(weatherResult) : '—'}
++            hint={weatherImpact ? `실제 ${weatherImpact.realValue?.toFixed(1)} / 기대 ${weatherImpact.expectValue?.toFixed(1)}` : '데이터 없음'}/>
+         </div>
+       </div>
+ 
+-      {/* 방문자 분석 */}
++      {/* 방문 추세 — visits/count API */}
+       <div>
+-        <div className="section-h"><h2>방문자 분석</h2><span className="sub">· 시간대, 일별, 인구 통계</span></div>
+-        <div className="card" style={{marginTop: 10}}>
++        <div className="section-h">
++          <h2>방문 추세</h2>
++          <span className="sub">· 이동평균 (5 / 10 / 20 / 60일)</span>
++          <span className="meta">{visits ? 'API 데이터' : '데이터 없음'}</span>
++        </div>
++        <div className="card" style={{marginTop:10}}>
+           <div className="card-h">
+-            <h3>시간대별 평균 방문자</h3>
+-            <span className="sub">· 30일 평균</span>
+-            <div className="right"><span className="chip dot">방문자</span><span className="chip">전월 비교</span></div>
++            <h3>매장 방문 추세</h3>
++            <span className="sub">· visits/count</span>
++            <div className="right"><span className="chip dot">5일선</span><span className="chip">10일선</span><span className="chip">20일선</span></div>
+           </div>
+-          <div className="card-b" style={{padding: "8px 16px 16px"}}>
+-            <HoursChart height={240}/>
+-            <div className="legend" style={{marginTop: 6}}>
+-              <div><span className="sw" style={{background: "var(--accent)"}}/>최근 30일</div>
+-              <div><span className="sw" style={{background: "#C9D0DA"}}/>이전 30일</div>
+-              <div style={{marginLeft:"auto", fontSize:11, color:"#9AA3AF"}}>단위: 시간당 방문자(명)</div>
+-            </div>
++          <div className="card-b" style={{padding:'8px 16px 16px'}}>
++            <VisitTrendChart visits={visits} height={220}/>
+           </div>
+         </div>
+-        <div className="grid-2" style={{marginTop: 14, gridTemplateColumns: "1.4fr 1fr"}}>
++      </div>
++
++      {/* 인구 통계 */}
++      <div>
++        <div className="section-h"><h2>인구 통계</h2><span className="sub">· 연령대 · 성별 · 방문 패턴</span></div>
++        <div className="grid-2" style={{marginTop:14, gridTemplateColumns:'1.4fr 1fr'}}>
+           <div className="card">
+-            <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도</span></div>
+-            <div className="card-b" style={{padding: "16px 16px 14px"}}>
+-              <div className="heat-wrap">
+-                <Heatmap/>
+-              </div>
+-              <div style={{marginTop: 12, display:"flex", alignItems:"center", gap: 8, fontSize: 11, color:"var(--muted)", flexWrap:"wrap"}}>
++            <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도 · 샘플</span></div>
++            <div className="card-b" style={{padding:'16px 16px 14px'}}>
++              <div className="heat-wrap"><Heatmap/></div>
++              <div style={{marginTop:12, display:'flex', alignItems:'center', gap:8, fontSize:11, color:'var(--muted)', flexWrap:'wrap'}}>
+                 <span>낮음</span>
+-                <div style={{display:"flex", gap: 2}}>
++                <div style={{display:'flex', gap:2}}>
+                   {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map(a => (
+-                    <div key={a} style={{width: 14, height: 12, borderRadius: 3, background: `oklch(0.62 0.14 250 / ${a})`}}/>
++                    <div key={a} style={{width:14, height:12, borderRadius:3, background:`oklch(0.62 0.14 250 / ${a})`}}/>
+                   ))}
+                 </div>
+                 <span>높음</span>
+-                <span style={{marginLeft:"auto"}} className="mono">토요일 19시 · 피크</span>
+               </div>
+             </div>
+           </div>
+-          <div className="card" style={{display:"flex", flexDirection:"column"}}>
+-            <div className="card-h"><h3>일별 방문자 추이</h3><span className="sub">· 30일</span></div>
++          <div className="card" style={{display:'flex', flexDirection:'column'}}>
++            <div className="card-h">
++              <h3>일별 방문 수</h3>
++              <span className="sub">· {visits ? 'API 데이터' : '샘플'}</span>
++            </div>
+             <div className="card-b" style={{flex:1, padding:0}}>
+-              <DailyBars days={30}/>
++              <DailyBars visits={visits}/>
+             </div>
+           </div>
+         </div>
+-        <div className="grid-2" style={{marginTop: 14}}>
++        <div className="grid-2" style={{marginTop:14}}>
+           <GenderCard/>
+-          <AgeCard/>
++          <AgeCard ageData={ageData}/>
+         </div>
+       </div>
+ 
+       {/* 체류 시간 */}
+       <div>
+-        <div className="section-h"><h2>체류 시간 분석</h2><span className="sub">· 분포, 시간대, 연령대</span></div>
+-        <div className="grid-3" style={{marginTop: 10}}>
++        <div className="section-h"><h2>체류 시간 분석</h2><span className="sub">· 분포, 시간대, 연령대 · 샘플 데이터</span></div>
++        <div className="grid-3" style={{marginTop:10}}>
+           <div className="card">
+             <div className="card-h"><h3>체류 시간 분포</h3><span className="sub">· 전체 방문자</span></div>
+             <div className="card-b">
+               <Histogram/>
+-              <div style={{marginTop: 12, padding: "10px 12px", background: "#F7F9FC", borderRadius: 10, fontSize: 12, color: "var(--muted)"}}>
+-                <b style={{color: "var(--ink)"}}>10–20분</b> 구간 비중이 가장 높아요 (28%). 짧은 체류 비중을 줄이면 전환율 개선 여지가 있어요.
++              <div style={{marginTop:12, padding:'10px 12px', background:'#F7F9FC', borderRadius:10, fontSize:12, color:'var(--muted)'}}>
++                <b style={{color:'var(--ink)'}}>10–20분</b> 구간 비중이 가장 높아요 (28%).
+               </div>
+             </div>
+           </div>
+@@ -108,17 +158,17 @@ export default function OverviewTab() {
+                   const x = i => PAD_L + (i / (HOURS.length - 1)) * innerW
+                   const y = v => PAD_T + innerH - (v / max) * innerH
+                   const pts = HOURS.map((d, i) => [x(i), y(d.stay)])
+-                  const path = pts.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")
++                  const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')
+                   return (
+                     <g>
+                       {[0, 12, 24, 36].map(g => (
+                         <g key={g}>
+-                          <line x1={PAD_L} x2={760 - PAD_R} y1={y(g)} y2={y(g)} stroke="#ECEEF2" strokeDasharray={g === 0 ? "" : "3 4"}/>
+-                          <text x={PAD_L - 4} y={y(g) + 3} fontSize="9" textAnchor="end" fill="#9AA3AF" fontFamily="JetBrains Mono">{g}</text>
++                          <line x1={PAD_L} x2={760-PAD_R} y1={y(g)} y2={y(g)} stroke="#ECEEF2" strokeDasharray={g===0?'':'3 4'}/>
++                          <text x={PAD_L-4} y={y(g)+3} fontSize="9" textAnchor="end" fill="#9AA3AF" fontFamily="JetBrains Mono">{g}</text>
+                         </g>
+                       ))}
+-                      {HOURS.filter((_, i) => i % 2 === 0).map((d, i) => (
+-                        <text key={d.h} x={x(i * 2)} y={102} fontSize="9" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{d.h}</text>
++                      {HOURS.filter((_,i) => i%2===0).map((d,i) => (
++                        <text key={d.h} x={x(i*2)} y={102} fontSize="9" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{d.h}</text>
+                       ))}
+                       <path d={path} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round"/>
+                       {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.4" fill="#fff" stroke="var(--accent)" strokeWidth="1.6"/>)}
+@@ -126,25 +176,21 @@ export default function OverviewTab() {
+                   )
+                 })()}
+               </svg>
+-              <div style={{display:"flex", justifyContent:"space-between", fontSize: 12, color: "var(--muted)", marginTop: 4}}>
+-                <span>점심 시간대 (12–13시)<br/><b className="mono" style={{color: "var(--ink)"}}>32분</b></span>
+-                <span style={{textAlign:"right"}}>저녁 피크 (18–19시)<br/><b className="mono" style={{color: "var(--ink)"}}>29분</b></span>
+-              </div>
+             </div>
+           </div>
+           <div className="card">
+             <div className="card-h"><h3>연령대별 평균 체류</h3><span className="sub">· AI 추정 · 분</span></div>
+             <div className="card-b">
+               <div className="age-stay">
+-                {[{label:"20–29",stay:21},{label:"30–39",stay:26},{label:"40–49",stay:24},{label:"50–59",stay:18},{label:"기타",stay:14}].map(a => (
++                {[{label:'20–29',stay:21},{label:'30–39',stay:26},{label:'40–49',stay:24},{label:'50–59',stay:18},{label:'기타',stay:14}].map(a => (
+                   <div className="row" key={a.label}>
+                     <div className="l">{a.label}</div>
+-                    <div className="track"><div className="fill" style={{width: (a.stay / 30) * 100 + "%"}}/></div>
++                    <div className="track"><div className="fill" style={{width:(a.stay/30)*100+'%'}}/></div>
+                     <div className="v">{a.stay}분</div>
+                   </div>
+                 ))}
+               </div>
+-              <div style={{marginTop: 14, fontSize: 11.5}} className="priv">
++              <div style={{marginTop:14, fontSize:11.5}} className="priv">
+                 <Ic.Shield color="#9AA3AF"/>연령대는 익명 통계 · 개인 식별 없음
+               </div>
+             </div>
+@@ -152,90 +198,91 @@ export default function OverviewTab() {
+         </div>
+       </div>
+ 
+-      {/* 전환 분석 */}
++      {/* 요일 패턴 분석 */}
+       <div>
+-        <div className="section-h"><h2>오프라인 전환 분석</h2><span className="sub">· 입구 → 체류 → 계산대 → 이탈</span></div>
+-        <div className="grid-2" style={{marginTop: 10, gridTemplateColumns: "1.4fr 1fr"}}>
+-          <div className="card">
+-            <div className="card-h">
+-              <h3>오프라인 전환 퍼널</h3>
+-              <span className="sub">· 30일 누적</span>
+-              <div className="right"><span className="chip">Vision AI Zone Events</span></div>
+-            </div>
+-            <div className="card-b"><Funnel/></div>
+-          </div>
+-          <div className="card">
+-            <div className="card-h"><h3>시간대별 전환율</h3><span className="sub">· 입구 대비 계산대</span></div>
+-            <div className="card-b">
+-              <svg viewBox="0 0 540 200" preserveAspectRatio="none" style={{width:"100%", height: 200}}>
+-                {(() => {
+-                  const PAD_L=34, PAD_R=14, PAD_T=14, PAD_B=24, innerW=540-PAD_L-PAD_R, innerH=200-PAD_T-PAD_B
+-                  const data = [22, 28, 32, 41, 44, 36, 30, 33, 38, 42, 39, 35, 28]
+-                  const max = 60
+-                  const x = i => PAD_L + (i / (data.length - 1)) * innerW
+-                  const y = v => PAD_T + innerH - (v / max) * innerH
+-                  const path = data.map((d, i) => (i === 0 ? "M" : "L") + x(i).toFixed(1) + "," + y(d).toFixed(1)).join(" ")
+-                  const area = path + ` L${x(data.length - 1)},${PAD_T + innerH} L${x(0)},${PAD_T + innerH} Z`
+-                  return (
+-                    <g>
+-                      <defs>
+-                        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+-                          <stop offset="0%" stopColor="oklch(0.50 0.16 295)" stopOpacity="0.22"/>
+-                          <stop offset="100%" stopColor="oklch(0.50 0.16 295)" stopOpacity="0"/>
+-                        </linearGradient>
+-                      </defs>
+-                      {[0,20,40,60].map(g => (
+-                        <g key={g}>
+-                          <line x1={PAD_L} x2={540-PAD_R} y1={y(g)} y2={y(g)} stroke="#ECEEF2" strokeDasharray={g===0?"":"3 4"}/>
+-                          <text x={PAD_L-6} y={y(g)+3} fontSize="9" textAnchor="end" fill="#9AA3AF" fontFamily="JetBrains Mono">{g}%</text>
+-                        </g>
+-                      ))}
+-                      {HOURS.filter((_,i)=>i%2===0).map((d,i)=>(
+-                        <text key={d.h} x={x(i*2)} y={194} fontSize="9.5" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{d.h}</text>
+-                      ))}
+-                      <path d={area} fill="url(#cg)"/>
+-                      <path d={path} fill="none" stroke="oklch(0.50 0.16 295)" strokeWidth="2.2" strokeLinecap="round"/>
+-                      {data.map((d,i)=>(<circle key={i} cx={x(i)} cy={y(d)} r="2.4" fill="#fff" stroke="oklch(0.50 0.16 295)" strokeWidth="1.6"/>))}
+-                    </g>
+-                  )
+-                })()}
+-              </svg>
+-              <div className="list-rows" style={{marginTop: 6}}>
+-                <div className="row"><span className="k" style={{color:"var(--muted)"}}>최고 전환 시간</span><span className="v">13시 · 44%</span></div>
+-                <div className="row"><span className="k" style={{color:"var(--muted)"}}>최저 전환 시간</span><span className="v">10시 · 22%</span></div>
+-              </div>
+-            </div>
+-          </div>
++        <div className="section-h"><h2>요일 패턴 분석</h2><span className="sub">· 일주일 방문 비교 · weekday-patterns API</span></div>
++        <div style={{marginTop:10}}>
++          <WeekdayPatternCard weekdayPatterns={weekdayPatterns}/>
+         </div>
+       </div>
+ 
+-      {/* 날씨 영향 */}
+-      <div>
+-        <div className="section-h"><h2>날씨 영향 분석</h2><span className="sub">· 날씨 × 비즈니스 지표</span></div>
+-        <div className="grid-2" style={{marginTop: 10}}>
+-          <div className="card">
+-            <div className="card-h"><h3>기온 vs 방문자 수</h3><span className="sub">· 30일 일별</span><div className="right"><span className="chip">상관관계</span></div></div>
+-            <div className="card-b">
+-              <Scatter/>
+-              <div style={{display:"flex", gap: 14, marginTop: 8, fontSize: 11.5, color: "var(--muted)", flexWrap:"wrap"}}>
+-                {[["맑음","oklch(0.75 0.13 80)"],["흐림","oklch(0.72 0.05 250)"],["비","oklch(0.62 0.14 250)"],["고온","oklch(0.65 0.18 25)"]].map(([l,c]) => (
+-                  <span key={l} style={{display:"inline-flex", alignItems:"center", gap: 6}}>
+-                    <span style={{width: 9, height: 9, background: c, borderRadius: 99}}/>{l}
+-                  </span>
+-                ))}
++      {/* 방문 예측 */}
++      {(tomorrow || nextWeekData.length > 0) && (
++        <div>
++          <div className="section-h"><h2>방문 예측</h2><span className="sub">· AI 예측 · 신뢰구간 포함</span></div>
++          <div className="grid-2" style={{marginTop:10}}>
++            {tomorrow && (
++              <div className="card">
++                <div className="card-h"><h3>내일 방문 예측</h3><span className="sub">· AI 예측</span></div>
++                <div className="card-b" style={{display:'flex', flexDirection:'column', gap:10}}>
++                  <div style={{fontSize:32, fontWeight:700, letterSpacing:'-0.02em', color:'var(--ink)'}}>
++                    {tomorrow.expectedVisits.toLocaleString()}
++                    <span style={{fontSize:14, fontWeight:500, color:'var(--muted)', marginLeft:4}}>명</span>
++                  </div>
++                  <div className="list-rows">
++                    <div className="row"><span className="k" style={{color:'var(--muted)'}}>신뢰구간 최솟값</span><span className="v mono">{tomorrow.minVisits.toLocaleString()}명</span></div>
++                    <div className="row"><span className="k" style={{color:'var(--muted)'}}>신뢰구간 최댓값</span><span className="v mono">{tomorrow.maxVisits.toLocaleString()}명</span></div>
++                  </div>
++                </div>
+               </div>
+-            </div>
+-          </div>
+-          <div className="card">
+-            <div className="card-h"><h3>날씨 영향도</h3><span className="sub">· 평소 대비</span></div>
+-            <div className="card-b"><WeatherCorrTable/></div>
++            )}
++            {nextWeekData.length > 0 && (
++              <div className="card">
++                <div className="card-h"><h3>다음 주 방문 예측</h3><span className="sub">· 월~일 · AI 예측</span></div>
++                <div className="card-b">
++                  {(() => {
++                    const DAY_LABELS = ['월','화','수','목','금','토','일']
++                    const maxV = Math.max(...nextWeekData.map(d => d.expectedVisits))
++                    return (
++                      <div style={{display:'flex', alignItems:'flex-end', gap:6, height:120}}>
++                        {nextWeekData.map((d, i) => {
++                          const h = maxV > 0 ? Math.max(8, (d.expectedVisits / maxV) * 90) : 8
++                          const isWeekend = i >= 5
++                          return (
++                            <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3}}>
++                              <div style={{fontSize:9.5, color:'var(--muted)', fontFamily:'JetBrains Mono', marginBottom:2}}>
++                                {d.expectedVisits}
++                              </div>
++                              <div style={{
++                                width:'100%', height:h,
++                                background: isWeekend ? 'oklch(0.68 0.13 295)' : 'var(--accent)',
++                                borderRadius:'3px 3px 0 0', opacity:0.85,
++                                position:'relative',
++                              }}>
++                                {/* 신뢰구간 표시 */}
++                                <div style={{
++                                  position:'absolute', left:'50%', transform:'translateX(-50%)',
++                                  width:2, background:'rgba(255,255,255,0.5)',
++                                  top:0, bottom:0,
++                                }}/>
++                              </div>
++                              <div style={{fontSize:10.5, color: isWeekend ? 'oklch(0.55 0.13 295)' : 'var(--muted)', fontFamily:'JetBrains Mono'}}>
++                                {DAY_LABELS[i]}
++                              </div>
++                            </div>
++                          )
++                        })}
++                      </div>
++                    )
++                  })()}
++                  <div style={{marginTop:8, fontSize:11.5, color:'var(--muted)', display:'flex', gap:12}}>
++                    <span style={{display:'inline-flex', alignItems:'center', gap:5}}>
++                      <span style={{width:10, height:10, borderRadius:2, background:'var(--accent)', display:'inline-block'}}/>평일
++                    </span>
++                    <span style={{display:'inline-flex', alignItems:'center', gap:5}}>
++                      <span style={{width:10, height:10, borderRadius:2, background:'oklch(0.68 0.13 295)', display:'inline-block'}}/>주말
++                    </span>
++                  </div>
++                </div>
++              </div>
++            )}
+           </div>
+         </div>
+-      </div>
++      )}
+ 
+-      <div className="priv" style={{padding:"6px 4px 12px", fontSize: 12}}>
++      <div className="priv" style={{padding:'6px 4px 12px', fontSize:12}}>
+         <Ic.Shield color="#9AA3AF"/>
+-        모든 통계는 Vision AI 익명 집계 결과입니다. 얼굴 인식, 개인 식별, 영상 저장은 수행하지 않습니다.
++        모든 통계는 Vision AI 익명 집계 결과입니다. 얼굴 인식, 개인 식별은 수행하지 않습니다.
+       </div>
+     </div>
+   )
+diff --git a/src/components/analytics/tabs/VisitorsTab.jsx b/src/components/analytics/tabs/VisitorsTab.jsx
+index 5bed0e3..f1f3a72 100644
+--- a/src/components/analytics/tabs/VisitorsTab.jsx
++++ b/src/components/analytics/tabs/VisitorsTab.jsx
+@@ -1,51 +1,77 @@
+ import KPI from '../../ui/KPI'
+ import { Ic } from '../../ui/Icons'
+-import HoursChart from '../charts/HoursChart'
++import VisitTrendChart from '../charts/VisitTrendChart'
+ import DailyBars from '../charts/DailyBars'
+ import Heatmap from '../charts/Heatmap'
+ import GenderCard from '../GenderCard'
+ import AgeCard from '../AgeCard'
+-import { DAYS_30 } from '../../../data/analytics'
++function formatAge(a) {
++  const m = { '00s':'유아', '10s':'10대', '20s':'20대', '30s':'30대', '40s':'40대', '50s':'50대', 'UNKNOWN':'연령미상' }
++  return m[a] ?? a ?? '연령미상'
++}
++function formatGender(g) {
++  if (g === 'MAN') return '남성'
++  if (g === 'WOMAN') return '여성'
++  return '성별미상'
++}
++
++export default function VisitorsTab({ data = {}, day }) {
++  const { coreCustomer, ageGroups: ageData, visits } = data
++  const coreAge    = coreCustomer ? formatAge(coreCustomer.age) : '—'
++  const coreGender = coreCustomer ? formatGender(coreCustomer.gender) : ''
++
++  // 선택 날짜 기준 이동평균 추출 (visits/count API)
++  const dayIdx = day && visits?.date ? visits.date.lastIndexOf(day) : -1
++  const getMA  = (lineIdx) => dayIdx >= 0 && visits?.data?.[lineIdx]?.[dayIdx] != null
++    ? Math.round(visits.data[lineIdx][dayIdx]) : null
++  const ma5  = getMA(0)
++  const ma20 = getMA(2)
++  const ma60 = getMA(3)
++  const spark5  = visits?.data?.[0]?.slice(-14) ?? null
++  const spark60 = visits?.data?.[3]?.slice(-14) ?? null
+ 
+-export default function VisitorsTab() {
+   return (
+     <div className="tab-pane" style={{display:"flex", flexDirection:"column", gap: 20}}>
+       <div>
+-        <div className="section-h"><h2>방문자 요약</h2><span className="sub">· 최근 30일</span></div>
++        <div className="section-h">
++          <h2>방문자 요약</h2>
++          <span className="sub">· {day}</span>
++          <span className="meta">{visits ? 'visits/count API' : '데이터 없음'}</span>
++        </div>
+         <div className="kpis" style={{marginTop: 10}}>
+-          <KPI label="총 방문자 수" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
+-               value="11,238" unit="명" delta={9.2} spark={DAYS_30.slice(-14)} sparkColor="oklch(0.62 0.14 250)"/>
+-          <KPI label="일평균 방문자" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
+-               value="374" unit="명" delta={6.1} spark={DAYS_30.slice(-14)} sparkColor="oklch(0.65 0.14 65)"/>
+-          <KPI label="피크 시간 방문자" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
+-               value="124" unit="명/시" delta={14.8} hint="19시 평균"/>
+-          <KPI label="주요 연령대" icon={<Ic.Users/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
+-               value="20대" hint="전체의 38%"/>
++          <KPI label="핵심 고객" icon={<Ic.Users/>} iconBg="oklch(0.95 0.04 295)" iconFg="oklch(0.50 0.16 295)"
++               value={coreAge} hint={coreGender ? `${coreGender} · AI 분석` : 'AI 분석'}/>
++          <KPI label="5일 이동평균" icon={<Ic.Activity/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
++               value={ma5 ?? '—'} unit={ma5 != null ? '명' : ''}
++               hint={day ?? ''} spark={spark5} sparkColor="oklch(0.65 0.14 65)"/>
++          <KPI label="20일 이동평균" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
++               value={ma20 ?? '—'} unit={ma20 != null ? '명' : ''}
++               hint={day ?? ''}/>
++          <KPI label="60일 이동평균" icon={<Ic.Users/>} iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
++               value={ma60 ?? '—'} unit={ma60 != null ? '명' : ''}
++               hint={day ?? ''} spark={spark60} sparkColor="oklch(0.62 0.14 250)"/>
+         </div>
+       </div>
+ 
++      {/* 방문 추세 — visits/count API */}
+       <div className="card">
+         <div className="card-h">
+-          <h3>시간대별 방문자 (30일 평균)</h3>
+-          <div className="right"><span className="chip dot">최근 30일</span><span className="chip">이전 30일</span></div>
++          <h3>매장 방문 추세</h3>
++          <span className="sub">· 이동평균 (5 / 10 / 20 / 60일)</span>
++          <div className="right">
++            <span className="chip dot">{visits ? 'API 데이터' : '데이터 없음'}</span>
++          </div>
+         </div>
+         <div className="card-b" style={{padding: "8px 16px 16px"}}>
+-          <HoursChart height={240}/>
+-          <div className="legend" style={{marginTop: 6}}>
+-            <div><span className="sw" style={{background: "var(--accent)"}}/>최근 30일</div>
+-            <div><span className="sw" style={{background: "#C9D0DA"}}/>이전 30일</div>
+-            <div style={{marginLeft:"auto", fontSize:11, color:"#9AA3AF"}}>단위: 시간당 방문자(명)</div>
+-          </div>
++          <VisitTrendChart visits={visits} height={220}/>
+         </div>
+       </div>
+ 
+       <div className="grid-2" style={{gridTemplateColumns: "1.4fr 1fr"}}>
+         <div className="card">
+-          <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도</span></div>
++          <div className="card-h"><h3>요일 × 시간대 히트맵</h3><span className="sub">· 방문자 밀도 · 샘플</span></div>
+           <div className="card-b" style={{padding: "16px 16px 14px"}}>
+-            <div className="heat-wrap">
+-              <Heatmap/>
+-            </div>
++            <div className="heat-wrap"><Heatmap/></div>
+             <div style={{marginTop: 12, display:"flex", alignItems:"center", gap: 8, fontSize: 11, color:"var(--muted)", flexWrap:"wrap"}}>
+               <span>낮음</span>
+               <div style={{display:"flex", gap: 2}}>
+@@ -54,19 +80,21 @@ export default function VisitorsTab() {
+                 ))}
+               </div>
+               <span>높음</span>
+-              <span style={{marginLeft:"auto"}} className="mono">토요일 19시 · 피크</span>
+             </div>
+           </div>
+         </div>
+         <div className="card" style={{display:"flex", flexDirection:"column"}}>
+-          <div className="card-h"><h3>일별 방문자 추이</h3><span className="sub">· 30일</span></div>
++          <div className="card-h">
++            <h3>일별 방문 수</h3>
++            <span className="sub">· {visits ? 'API 데이터' : '샘플'}</span>
++          </div>
+           <div className="card-b" style={{flex:1, padding:0}}>
+-            <DailyBars days={30}/>
++            <DailyBars visits={visits}/>
+           </div>
+         </div>
+       </div>
+ 
+-      <div className="grid-2"><GenderCard/><AgeCard/></div>
++      <div className="grid-2"><GenderCard/><AgeCard ageData={ageData}/></div>
+     </div>
+   )
+ }
+diff --git a/src/components/analytics/tabs/WeatherTab.jsx b/src/components/analytics/tabs/WeatherTab.jsx
+index 691922b..07b760d 100644
+--- a/src/components/analytics/tabs/WeatherTab.jsx
++++ b/src/components/analytics/tabs/WeatherTab.jsx
+@@ -1,61 +1,290 @@
+ import KPI from '../../ui/KPI'
+ import { Ic } from '../../ui/Icons'
+-import Scatter from '../charts/Scatter'
+-import WeatherCorrTable from '../WeatherCorrTable'
+ 
+-export default function WeatherTab() {
++function resultLabel(r) { return r === 'GOOD' ? '좋음' : r === 'BAD' ? '나쁨' : '보통' }
++function resultBg(r) {
++  return r === 'GOOD' ? 'oklch(0.95 0.04 155)' : r === 'BAD' ? 'oklch(0.95 0.04 25)' : 'oklch(0.95 0.05 80)'
++}
++function resultFg(r) {
++  return r === 'GOOD' ? 'oklch(0.42 0.12 155)' : r === 'BAD' ? 'oklch(0.55 0.16 25)' : 'oklch(0.55 0.14 65)'
++}
++function resultDesc(r) {
++  if (r === 'GOOD') return '날씨 영향을 제거했을 때도 기대치를 웃도는 성과예요.'
++  if (r === 'BAD') return '날씨 영향을 제거해도 기대치에 미달하는 성과예요.'
++  return '날씨 영향을 제거하면 기대치에 부합하는 수준이에요.'
++}
++
++function ValueBar({ label, value, max, color, pct }) {
++  const w = max > 0 ? (value / max) * 100 : 0
++  return (
++    <div style={{display:'flex', flexDirection:'column', gap:4}}>
++      <div style={{display:'flex', justifyContent:'space-between', fontSize:12}}>
++        <span style={{color:'var(--muted)'}}>{label}</span>
++        <span style={{fontWeight:600, fontFamily:'JetBrains Mono, monospace'}}>{value?.toFixed(1)}</span>
++      </div>
++      <div style={{height:8, background:'#F1F3F6', borderRadius:99, overflow:'hidden'}}>
++        <div style={{height:'100%', width:w+'%', background:color, borderRadius:99, transition:'width .4s'}}/>
++      </div>
++      {pct != null && (
++        <div style={{fontSize:11, color:'var(--muted)', textAlign:'right'}}>
++          기대 대비 <span style={{fontWeight:600, color: pct >= 0 ? 'oklch(0.42 0.12 155)' : 'oklch(0.55 0.16 25)'}}>
++            {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
++          </span>
++        </div>
++      )}
++    </div>
++  )
++}
++
++export default function WeatherTab({ data = {}, day }) {
++  const { weatherImpact, weekdayPatterns } = data
++  const jsDay = day ? new Date(day).getDay() : -1
++  const dayIndex = jsDay === 0 ? 6 : jsDay - 1
++  const weekdayPattern = weekdayPatterns?.[dayIndex] ?? null
++
+   return (
+     <div className="tab-pane" style={{display:"flex", flexDirection:"column", gap: 20}}>
++
++      {/* KPI 요약 */}
+       <div>
+-        <div className="section-h"><h2>날씨 영향 요약</h2><span className="sub">· 최근 30일</span></div>
++        <div className="section-h"><h2>날씨 영향 요약</h2><span className="sub">· 당일 · API 데이터</span></div>
+         <div className="kpis" style={{marginTop: 10}}>
+-          <KPI label="기온 ↔ 방문자 상관" icon={<Ic.Sun/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)" value="0.78" hint="강한 양의 상관"/>
+-          <KPI label="비 오는 날 방문자" icon={<Ic.CloudRain/>} iconBg="oklch(0.95 0.04 250)" iconFg="oklch(0.48 0.16 250)" value="-25" unit="%" hint="평소 대비 감소"/>
+-          <KPI label="맑은 날 방문자" icon={<Ic.Sun/>} iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)" value="+9.4" unit="%" hint="평소 대비 증가"/>
+-          <KPI label="비 오는 날 체류" icon={<Ic.Clock/>} iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)" value="+8.6" unit="%" hint="평소보다 더 길게 머무름"/>
++          {weatherImpact ? (
++            <>
++              <KPI label="날씨 보정 성과"
++                icon={<Ic.Sun/>}
++                iconBg={resultBg(weatherImpact.result)}
++                iconFg={resultFg(weatherImpact.result)}
++                value={resultLabel(weatherImpact.result)}
++                hint={`실제 ${weatherImpact.realValue?.toFixed(1)} / 기대 ${weatherImpact.expectValue?.toFixed(1)}`}/>
++              <KPI label="실제값"
++                icon={<Ic.Activity/>}
++                iconBg="oklch(0.95 0.03 250)" iconFg="oklch(0.48 0.16 250)"
++                value={weatherImpact.realValue?.toFixed(1) ?? '—'}
++                hint="날씨 영향 반영"/>
++              <KPI label="보정값"
++                icon={<Ic.Trend/>}
++                iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
++                value={weatherImpact.adjustedValue?.toFixed(1) ?? '—'}
++                hint="날씨 영향 제거 후"/>
++            </>
++          ) : (
++            <KPI label="날씨 보정 성과" icon={<Ic.Sun/>}
++              iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
++              value="—" hint="데이터 없음"/>
++          )}
++          {weekdayPattern ? (
++            <KPI label="요일 패턴 분석"
++              icon={<Ic.Clock/>}
++              iconBg={resultBg(weekdayPattern.result)}
++              iconFg={resultFg(weekdayPattern.result)}
++              value={resultLabel(weekdayPattern.result)}
++              hint={`실제 ${weekdayPattern.realValue?.toFixed(1)} / 기대 ${weekdayPattern.expectValue?.toFixed(1)}`}/>
++          ) : (
++            <KPI label="요일 패턴 분석" icon={<Ic.Clock/>}
++              iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
++              value="—" hint="데이터 없음 (8주+ 필요)"/>
++          )}
+         </div>
+       </div>
+ 
+-      <div className="grid-2-1">
+-        <div className="card">
+-          <div className="card-h"><h3>기온 vs 일별 방문자</h3><span className="sub">· 30일</span></div>
+-          <div className="card-b">
+-            <Scatter/>
+-            <div style={{display:"flex", gap: 14, marginTop: 8, fontSize: 11.5, color: "var(--muted)", flexWrap:"wrap"}}>
+-              {[["맑음","oklch(0.75 0.13 80)"],["흐림","oklch(0.72 0.05 250)"],["비","oklch(0.62 0.14 250)"],["고온","oklch(0.65 0.18 25)"]].map(([l,c]) => (
+-                <span key={l} style={{display:"inline-flex", alignItems:"center", gap: 6}}>
+-                  <span style={{width: 9, height: 9, background: c, borderRadius: 99}}/>{l}
+-                </span>
+-              ))}
++      {/* 날씨 영향 상세 — weather-impact API */}
++      <div>
++        <div className="section-h"><h2>날씨 영향 보정 상세</h2><span className="sub">· weather-impact API</span></div>
++        <div className="grid-2" style={{marginTop:10}}>
++          <div className="card">
++            <div className="card-h">
++              <h3>실제값 / 기대값 / 보정값 비교</h3>
++              {weatherImpact && (
++                <div className="right">
++                  <span style={{
++                    padding:'3px 8px', borderRadius:999, fontSize:11.5, fontWeight:600,
++                    background: resultBg(weatherImpact.result),
++                    color: resultFg(weatherImpact.result),
++                  }}>{resultLabel(weatherImpact.result)}</span>
++                </div>
++              )}
++            </div>
++            <div className="card-b" style={{display:'flex', flexDirection:'column', gap:14}}>
++              {weatherImpact ? (
++                <>
++                  {(() => {
++                    const maxV = Math.max(weatherImpact.realValue ?? 0, weatherImpact.expectValue ?? 0, weatherImpact.adjustedValue ?? 0)
++                    const realPct = weatherImpact.expectValue > 0
++                      ? ((weatherImpact.realValue - weatherImpact.expectValue) / weatherImpact.expectValue) * 100
++                      : null
++                    return (
++                      <>
++                        <ValueBar label="실제값 (Real)" value={weatherImpact.realValue} max={maxV} color="var(--accent)" pct={realPct}/>
++                        <ValueBar label="기대값 (Expected)" value={weatherImpact.expectValue} max={maxV} color="#C9D0DA"/>
++                        <ValueBar label="보정값 (Adjusted)" value={weatherImpact.adjustedValue} max={maxV} color="oklch(0.65 0.14 155)"/>
++                      </>
++                    )
++                  })()}
++                  <div style={{
++                    padding:'10px 12px', borderRadius:10, fontSize:12.5, lineHeight:1.55,
++                    background: weatherImpact.result === 'GOOD' ? 'var(--good-soft)' : weatherImpact.result === 'BAD' ? '#FEF2F2' : 'var(--accent-soft)',
++                    color: resultFg(weatherImpact.result),
++                  }}>
++                    {resultDesc(weatherImpact.result)}
++                  </div>
++                </>
++              ) : (
++                <div style={{padding:'20px', textAlign:'center', color:'var(--muted)', fontSize:13}}>
++                  날씨 보정 데이터가 없습니다.
++                </div>
++              )}
++            </div>
++          </div>
++
++          {/* weather-impact SVG 막대 차트 */}
++          <div className="card">
++            <div className="card-h"><h3>수치 비교 차트</h3><span className="sub">· 값 시각화</span></div>
++            <div className="card-b">
++              {weatherImpact ? (
++                (() => {
++                  const bars = [
++                    { label: '실제값', value: weatherImpact.realValue ?? 0, color: 'var(--accent)' },
++                    { label: '기대값', value: weatherImpact.expectValue ?? 0, color: '#C9D0DA' },
++                    { label: '보정값', value: weatherImpact.adjustedValue ?? 0, color: 'oklch(0.65 0.14 155)' },
++                  ]
++                  const maxV = Math.max(...bars.map(b => b.value)) || 1
++                  return (
++                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
++                      <div style={{display:'flex', alignItems:'flex-end', gap:12, height:140}}>
++                        {bars.map((b, i) => {
++                          const h = Math.max(6, (b.value / maxV) * 120)
++                          return (
++                            <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
++                              <div style={{fontSize:11, fontFamily:'JetBrains Mono', color:'var(--muted)', marginBottom:2}}>
++                                {b.value?.toFixed(1)}
++                              </div>
++                              <div style={{width:'100%', height:h, background:b.color, borderRadius:'4px 4px 0 0'}}/>
++                              <div style={{fontSize:11, color:'var(--muted)', textAlign:'center', lineHeight:1.3}}>{b.label}</div>
++                            </div>
++                          )
++                        })}
++                      </div>
++                      <div style={{borderTop:'1px solid var(--line)', paddingTop:10, display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, fontSize:12}}>
++                        <div><span style={{color:'var(--muted)'}}>실제 vs 기대</span></div>
++                        <div style={{textAlign:'right', fontWeight:600, fontFamily:'JetBrains Mono'}}>
++                          {weatherImpact.expectValue > 0
++                            ? (((weatherImpact.realValue - weatherImpact.expectValue) / weatherImpact.expectValue) * 100).toFixed(1) + '%'
++                            : '—'}
++                        </div>
++                      </div>
++                    </div>
++                  )
++                })()
++              ) : (
++                <div style={{padding:'20px', textAlign:'center', color:'var(--muted)', fontSize:13}}>
++                  데이터 없음
++                </div>
++              )}
+             </div>
+           </div>
+         </div>
+-        <div className="card">
+-          <div className="card-h"><h3>오늘 기상 영향 예측</h3><span className="sub">· AI 추정</span></div>
+-          <div className="card-b" style={{display:"flex", flexDirection:"column", gap: 12}}>
+-            <div className="wx">
+-              <div className="wx-icn"><Ic.Sun/></div>
+-              <div>
+-                <div className="wx-temp mono">23°</div>
+-                <div className="wx-desc">맑음 · 강수확률 10% · 5월 16일</div>
+-              </div>
++      </div>
++
++      {/* 요일 패턴 분석 — weekday-patterns API */}
++      <div>
++        <div className="section-h"><h2>요일 패턴 분석</h2><span className="sub">· weekday-patterns API · 이상 탐지</span></div>
++        <div className="grid-2" style={{marginTop:10}}>
++          <div className="card">
++            <div className="card-h">
++              <h3>실제값 vs 기대값 비교</h3>
++              {weekdayPattern && (
++                <div className="right">
++                  <span style={{
++                    padding:'3px 8px', borderRadius:999, fontSize:11.5, fontWeight:600,
++                    background: resultBg(weekdayPattern.result),
++                    color: resultFg(weekdayPattern.result),
++                  }}>{resultLabel(weekdayPattern.result)}</span>
++                </div>
++              )}
+             </div>
+-            <div style={{padding: "12px 14px", borderRadius: 10, background: "var(--accent-soft)", color: "var(--accent-ink)", fontSize: 12.5, lineHeight: 1.55}}>
+-              과거 동일 기상 조건에서 평소보다 <b>+14%</b> 방문자 증가가 관측됐어요. 야외 입간판, 외부 시식 행사를 활용해 보세요.
++            <div className="card-b" style={{display:'flex', flexDirection:'column', gap:14}}>
++              {weekdayPattern ? (
++                <>
++                  {(() => {
++                    const maxV = Math.max(weekdayPattern.realValue ?? 0, weekdayPattern.expectValue ?? 0)
++                    const diff = weekdayPattern.expectValue > 0
++                      ? ((weekdayPattern.realValue - weekdayPattern.expectValue) / weekdayPattern.expectValue) * 100
++                      : null
++                    return (
++                      <>
++                        <ValueBar label="실제값 (Real)" value={weekdayPattern.realValue} max={maxV} color="var(--accent)" pct={diff}/>
++                        <ValueBar label="기대값 (Expected)" value={weekdayPattern.expectValue} max={maxV} color="#C9D0DA"/>
++                      </>
++                    )
++                  })()}
++                  <div style={{
++                    padding:'10px 12px', borderRadius:10, fontSize:12.5, lineHeight:1.55,
++                    background: weekdayPattern.result === 'GOOD' ? 'var(--good-soft)' : weekdayPattern.result === 'BAD' ? '#FEF2F2' : 'var(--accent-soft)',
++                    color: resultFg(weekdayPattern.result),
++                  }}>
++                    {weekdayPattern.result === 'GOOD' && '이 요일 평균 대비 좋은 성과예요.'}
++                    {weekdayPattern.result === 'NORMAL' && '이 요일 평균 범위 안의 정상 수준이에요.'}
++                    {weekdayPattern.result === 'BAD' && '이 요일 평균 대비 낮은 성과예요. 원인을 살펴보세요.'}
++                  </div>
++                </>
++              ) : (
++                <div style={{padding:'20px', textAlign:'center', color:'var(--muted)', fontSize:13, lineHeight:1.6}}>
++                  요일 패턴 데이터가 없습니다.<br/>
++                  <span style={{fontSize:11.5}}>최소 8주 이상의 과거 데이터가 필요합니다.</span>
++                </div>
++              )}
+             </div>
+-            <div className="list-rows">
+-              <div className="row"><span className="k" style={{color: "var(--muted)"}}>예상 방문자</span><span className="v">+58명</span></div>
+-              <div className="row"><span className="k" style={{color: "var(--muted)"}}>예상 피크</span><span className="v">19시</span></div>
+-              <div className="row"><span className="k" style={{color: "var(--muted)"}}>예상 전환율</span><span className="v">38–40%</span></div>
++          </div>
++
++          {/* weekday-patterns 시각화 */}
++          <div className="card">
++            <div className="card-h"><h3>요일 패턴 차트</h3><span className="sub">· 실제 vs 기대</span></div>
++            <div className="card-b">
++              {weekdayPattern ? (
++                (() => {
++                  const bars = [
++                    { label: '실제값', value: weekdayPattern.realValue ?? 0, color: 'var(--accent)' },
++                    { label: '기대값', value: weekdayPattern.expectValue ?? 0, color: '#C9D0DA' },
++                  ]
++                  const maxV = Math.max(...bars.map(b => b.value)) || 1
++                  return (
++                    <div style={{display:'flex', flexDirection:'column', gap:8}}>
++                      <div style={{display:'flex', alignItems:'flex-end', gap:20, height:140, padding:'0 20px'}}>
++                        {bars.map((b, i) => {
++                          const h = Math.max(6, (b.value / maxV) * 120)
++                          return (
++                            <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
++                              <div style={{fontSize:12, fontFamily:'JetBrains Mono', color:'var(--muted)', marginBottom:2}}>
++                                {b.value?.toFixed(1)}
++                              </div>
++                              <div style={{width:'100%', height:h, background:b.color, borderRadius:'4px 4px 0 0'}}/>
++                              <div style={{fontSize:11.5, color:'var(--muted)', textAlign:'center'}}>{b.label}</div>
++                            </div>
++                          )
++                        })}
++                      </div>
++                      <div style={{borderTop:'1px solid var(--line)', paddingTop:10, fontSize:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:6}}>
++                        <div><span style={{color:'var(--muted)'}}>차이</span></div>
++                        <div style={{textAlign:'right', fontWeight:700, fontFamily:'JetBrains Mono',
++                          color: (weekdayPattern.realValue ?? 0) >= (weekdayPattern.expectValue ?? 0)
++                            ? 'oklch(0.42 0.12 155)' : 'oklch(0.55 0.16 25)'
++                        }}>
++                          {((weekdayPattern.realValue ?? 0) - (weekdayPattern.expectValue ?? 0)).toFixed(1)}
++                        </div>
++                      </div>
++                    </div>
++                  )
++                })()
++              ) : (
++                <div style={{padding:'20px', textAlign:'center', color:'var(--muted)', fontSize:13}}>
++                  데이터 없음
++                </div>
++              )}
+             </div>
+           </div>
+         </div>
+       </div>
+-
+-      <div className="card">
+-        <div className="card-h"><h3>날씨별 비즈니스 지표 비교</h3><span className="sub">· 평소 대비</span></div>
+-        <div className="card-b"><WeatherCorrTable/></div>
+-      </div>
+     </div>
+   )
+ }
+diff --git a/src/components/dashboard/CoreCustomerProfile.jsx b/src/components/dashboard/CoreCustomerProfile.jsx
+index f5e1e68..66a5444 100644
+--- a/src/components/dashboard/CoreCustomerProfile.jsx
++++ b/src/components/dashboard/CoreCustomerProfile.jsx
+@@ -1,166 +1,69 @@
+ import { Ic } from "../ui/Icons";
+ import InfoTooltip from "../ui/InfoTooltip";
+ 
+-const RANK = ["①", "②", "③"];
+-
+-const RANK_COLORS = [
+-  "oklch(0.78 0.14 85)",   // 금
+-  "oklch(0.68 0.05 250)",  // 은
+-  "oklch(0.70 0.10 55)",   // 동
+-];
+-
+-function genderKr(g) {
+-  if (g === "female") return "여성";
+-  if (g === "male") return "남성";
++function genderLabel(g) {
++  if (g === "MAN" || g === "MALE") return "남성";
++  if (g === "WOMAN" || g === "FEMALE") return "여성";
+   return "미상";
+ }
+ 
+-function ageKr(a) {
+-  if (!a || a === "unknown") return "미상";
++function ageLabel(a) {
++  if (!a || a === "UNKNOWN" || a === "unknown") return "연령미상";
+   return a.replace("s", "대");
+ }
+ 
+-function compute(persons) {
+-  if (!persons || persons.length === 0) return { ranked: [], summary: null };
+-
+-  const counts = {};
+-  persons.forEach((p) => {
+-    const key = `${p.gender}|${p.ageGroup}`;
+-    counts[key] = (counts[key] || 0) + 1;
+-  });
+-
+-  const total = persons.length;
+-  const ranked = Object.entries(counts)
+-    .map(([key, count]) => {
+-      const [gender, ageGroup] = key.split("|");
+-      return { gender, ageGroup, count, pct: (count / total) * 100 };
+-    })
+-    .sort((a, b) => b.count - a.count)
+-    .slice(0, 3);
+-
+-  // 상위 3개 중 지배적 성별 집계
+-  const topPct = ranked.reduce((s, r) => s + r.pct, 0);
+-  const genderTally = {};
+-  ranked.forEach((r) => {
+-    genderTally[r.gender] = (genderTally[r.gender] || 0) + 1;
+-  });
+-  const [dominantGender, dominantCount] = Object.entries(genderTally).sort(
+-    (a, b) => b[1] - a[1],
+-  )[0];
+-
+-  return {
+-    ranked,
+-    maxPct: ranked[0]?.pct ?? 1,
+-    summary: { gender: dominantGender, count: dominantCount, pct: topPct },
+-  };
+-}
+-
+-export default function CoreCustomerProfile({ persons }) {
+-  const { ranked, maxPct, summary } = compute(persons);
++export default function CoreCustomerProfile({ core }) {
++  const age = ageLabel(core?.age);
++  const gender = genderLabel(core?.gender);
++  const hasData = core && core.age !== "UNKNOWN" && core.gender !== "UNKNOWN";
+ 
+   return (
+     <div className="card">
+       <div className="card-h">
+         <h3>핵심 고객 프로파일</h3>
+-        <span className="sub">· 성별 × 연령대 조합</span>
++        <span className="sub">· core-customers API 결과</span>
+         <div className="right">
+           <span className="chip" style={{ background: "var(--accent-soft)", color: "var(--accent-ink)" }}>대표 그룹</span>
+           <InfoTooltip text={'오늘 매장을 가장 많이 방문한 핵심 고객 그룹이에요.\n\nVision AI가 성별과 연령대를 익명으로 추정해서 대표 그룹을 계산해요. 어떤 손님이 주로 오는지 파악해서 운영이나 마케팅에 참고할 수 있어요.'} />
+         </div>
+       </div>
+ 
+-      <div className="card-b">
+-        {ranked.length === 0 ? (
++      <div className="card-b" style={{ padding: "20px 16px" }}>
++        {!core ? (
+           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}>
+-            분석된 영상 데이터가 없습니다.
++            데이터를 불러오는 중입니다...
+           </p>
+         ) : (
+-          <>
+-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+-              {ranked.map((r, i) => (
+-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+-                  {/* 순위 */}
+-                  <div
+-                    style={{
+-                      width: 22,
+-                      fontSize: 16,
+-                      fontWeight: 700,
+-                      color: RANK_COLORS[i],
+-                      flexShrink: 0,
+-                      textAlign: "center",
+-                    }}
+-                  >
+-                    {RANK[i]}
+-                  </div>
+-
+-                  {/* 레이블 */}
+-                  <div
+-                    style={{
+-                      width: 72,
+-                      fontSize: 13.5,
+-                      fontWeight: 600,
+-                      flexShrink: 0,
+-                    }}
+-                  >
+-                    {ageKr(r.ageGroup)} {genderKr(r.gender)}
+-                  </div>
+-
+-                  {/* 바 */}
+-                  <div
+-                    style={{
+-                      flex: 1,
+-                      height: 7,
+-                      background: "#F1F3F6",
+-                      borderRadius: 99,
+-                      overflow: "hidden",
+-                    }}
+-                  >
+-                    <div
+-                      style={{
+-                        height: "100%",
+-                        width: `${(r.pct / maxPct) * 100}%`,
+-                        background: RANK_COLORS[i],
+-                        borderRadius: 99,
+-                        transition: "width .6s ease",
+-                      }}
+-                    />
+-                  </div>
+-
+-                  {/* 퍼센트 */}
+-                  <div
+-                    className="mono"
+-                    style={{ width: 40, textAlign: "right", fontSize: 13, fontWeight: 600 }}
+-                  >
+-                    {r.pct.toFixed(1)}%
+-                  </div>
+-                </div>
+-              ))}
++          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
++            {/* 세련된 성별/연령 표시 아이콘 배지 */}
++            <div style={{
++              width: 54, height: 54, borderRadius: 16,
++              background: hasData ? "oklch(0.95 0.04 155)" : "oklch(0.95 0.03 250)",
++              display: "grid", placeItems: "center",
++              color: hasData ? "oklch(0.42 0.12 155)" : "oklch(0.48 0.16 250)",
++              flexShrink: 0
++            }}>
++              <Ic.Users style={{ width: 24, height: 24 }} />
+             </div>
+ 
+-            {/* 요약 */}
+-            {summary && (
+-              <div
+-                style={{
+-                  marginTop: 18,
+-                  padding: "10px 12px",
+-                  background: "var(--accent-soft)",
+-                  borderRadius: 9,
+-                  fontSize: 12.5,
+-                  color: "var(--accent-ink)",
+-                  lineHeight: 1.6,
+-                }}
+-              >
+-                → {genderKr(summary.gender)} {summary.count}개 구간이 방문의{" "}
+-                <strong>{summary.pct.toFixed(1)}%</strong> 차지
++            <div style={{ flex: 1 }}>
++              <div style={{
++                fontSize: 20, fontWeight: 800, color: "var(--ink)",
++                letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 6
++              }}>
++                {age} {gender}
++              </div>
++              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>
++                {hasData ? "오늘 우리 매장을 가장 많이 방문한 핵심 연령/성별 그룹입니다." : "대표 고객 정보 수집 중이거나 정보가 미상입니다."}
+               </div>
+-            )}
+-
+-            <div className="priv" style={{ marginTop: 14, fontSize: 11.5 }}>
+-              <Ic.Shield color="#9AA3AF" />
+-              Vision AI 익명 추정 통계입니다.
+             </div>
+-          </>
++          </div>
+         )}
++
++        <div className="priv" style={{ marginTop: 20, fontSize: 11.5 }}>
++          <Ic.Shield color="#9AA3AF" />
++          Vision AI 익명 추정 통계입니다.
++        </div>
+       </div>
+     </div>
+   );
+diff --git a/src/components/dashboard/PredictionDetail.jsx b/src/components/dashboard/PredictionDetail.jsx
+index 2e2e668..d295b17 100644
+--- a/src/components/dashboard/PredictionDetail.jsx
++++ b/src/components/dashboard/PredictionDetail.jsx
+@@ -78,7 +78,7 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
+       </div>
+ 
+       <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+-        {/* 상단 3개 수치 — compact 모드에서 숨김 */}
++        {/* 상단 3개 수치 */}
+         {!compact && (
+           <div
+             style={{
+@@ -194,7 +194,7 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
+                             whiteSpace: "nowrap",
+                           }}
+                         >
+-                          내일
++                    
+                         </div>
+                       )}
+                     </div>
+@@ -276,7 +276,7 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
+           </p>
+         )}
+ 
+-        {/* 신뢰 구간 안내 — compact 모드에서 숨김 */}
++        {/* 신뢰 구간 안내 */}
+         {!compact && (
+           <div
+             style={{
+diff --git a/src/components/dashboard/TimeDemographics.jsx b/src/components/dashboard/TimeDemographics.jsx
+index d53198b..1368cc2 100644
+--- a/src/components/dashboard/TimeDemographics.jsx
++++ b/src/components/dashboard/TimeDemographics.jsx
+@@ -16,7 +16,8 @@ const SLOT_COLORS = [
+ ];
+ 
+ function ageLabel(a) {
+-  return a?.replace("s", "대") ?? "—";
++  if (!a || a === "unknown" || a === "UNKNOWN") return "—";
++  return a.replace("s", "대");
+ }
+ function genderLabel(g) {
+   if (g === "female") return "여성";
+@@ -52,7 +53,7 @@ function compute(persons) {
+         const [ageGroup, gender] = key.split("|");
+         return {
+           label: `${ageLabel(ageGroup)} ${genderLabel(gender)}`,
+-          pct: Math.round((cnt / total) * 100),
++          pct: Number(((cnt / total) * 100).toFixed(1)),
+         };
+       })
+       .sort((a, b) => b.pct - a.pct)
+diff --git a/src/components/dashboard/TrendChart.jsx b/src/components/dashboard/TrendChart.jsx
+index cb96811..25ea2e6 100644
+--- a/src/components/dashboard/TrendChart.jsx
++++ b/src/components/dashboard/TrendChart.jsx
+@@ -5,7 +5,7 @@ const LINES = [
+   { label: '60일선', color: 'oklch(0.65 0.10 65)',  width: 1.6 },
+ ]
+ 
+-export default function TrendChart({ data }) {
++export default function TrendChart({ data, selectedDay }) {
+   if (!data?.date?.length) {
+     return (
+       <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-2)', fontSize: 13 }}>
+@@ -14,12 +14,31 @@ export default function TrendChart({ data }) {
+     )
+   }
+ 
++  // Find index of the selected date to start drawing from
++  let startIndex = 0;
++  if (selectedDay) {
++    const idx = data.date.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10));
++    if (idx !== -1) {
++      startIndex = idx;
++      
++      // UX Safety: If the remaining points are too few (e.g. less than 5), 
++      // show at least 5 days of history so the graph remains visually readable and useful.
++      const totalPoints = data.date.length;
++      if (totalPoints - startIndex < 5 && totalPoints >= 5) {
++        startIndex = totalPoints - 5;
++      }
++    }
++  }
++
++  const slicedDate = data.date.slice(startIndex);
++  const slicedData = (data.data ?? []).map(line => line.slice(startIndex));
++
+   const W = 760, H = 220, PAD_L = 36, PAD_R = 14, PAD_T = 12, PAD_B = 24
+   const innerW = W - PAD_L - PAD_R
+   const innerH = H - PAD_T - PAD_B
+-  const n = data.date.length
++  const n = slicedDate.length
+ 
+-  const allVals = (data.data ?? []).flat().filter(v => v != null && !isNaN(v))
++  const allVals = slicedData.flat().filter(v => v != null && !isNaN(v))
+   const minY = allVals.length ? Math.max(0, Math.min(...allVals) * 0.9) : 0
+   const maxY = allVals.length ? Math.max(...allVals) * 1.1 : 100
+   const range = maxY - minY || 1
+@@ -35,7 +54,7 @@ export default function TrendChart({ data }) {
+   }
+ 
+   const step = Math.max(1, Math.floor(n / 6))
+-  const dateLabels = data.date
++  const dateLabels = slicedDate
+     .map((d, i) => ({ label: d.slice(5, 10), i }))
+     .filter(({ i }) => i % step === 0 || i === n - 1)
+ 
+@@ -58,7 +77,7 @@ export default function TrendChart({ data }) {
+           <text key={i} x={xi(i)} y={H - 6} fontSize="10" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{label}</text>
+         ))}
+ 
+-        {(data.data ?? []).slice(0, LINES.length).map((vals, li) => {
++        {slicedData.slice(0, LINES.length).map((vals, li) => {
+           const d = pathFor(vals)
+           return d ? (
+             <path key={li} d={d} fill="none" stroke={LINES[li].color} strokeWidth={LINES[li].width} strokeLinecap="round" strokeLinejoin="round" />
+@@ -67,12 +86,12 @@ export default function TrendChart({ data }) {
+       </svg>
+ 
+       <div className="legend">
+-        {LINES.slice(0, (data.data ?? []).length).map(l => (
++        {LINES.slice(0, slicedData.length).map(l => (
+           <div key={l.label}><span className="sw" style={{ background: l.color }} />{l.label}</div>
+         ))}
+         {(() => {
+-          const ma5 = data.data?.[0] ?? []
+-          const ma20 = data.data?.[2] ?? []
++          const ma5 = slicedData?.[0] ?? []
++          const ma20 = slicedData?.[2] ?? []
+           const pairs = []
+           for (let i = ma5.length - 1; i >= 0 && pairs.length < 2; i--) {
+             if (ma5[i] != null && ma20[i] != null) pairs.unshift([ma5[i], ma20[i]])
+diff --git a/src/components/dashboard/WeatherPerformance.jsx b/src/components/dashboard/WeatherPerformance.jsx
+index e523d0b..2905b04 100644
+--- a/src/components/dashboard/WeatherPerformance.jsx
++++ b/src/components/dashboard/WeatherPerformance.jsx
+@@ -58,7 +58,7 @@ function BarRow({ label, value, max, color }) {
+         />
+       </div>
+       <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>
+-        {value}
++        {typeof value === "number" ? value.toFixed(1) : value}
+       </div>
+     </div>
+   );
+@@ -123,8 +123,8 @@ export default function WeatherPerformance({ weather }) {
+           }}
+         >
+           {[
+-            { label: "어제 실제 방문", value: realValue, unit: "명", color: "var(--ink)" },
+-            { label: "날씨·요일 기댓값", value: expectValue, unit: "명", color: "var(--muted)" },
++            { label: "어제 실제 방문", value: typeof realValue === "number" ? realValue.toFixed(1) : realValue, unit: "명", color: "var(--ink)" },
++            { label: "날씨·요일 기댓값", value: typeof expectValue === "number" ? expectValue.toFixed(1) : expectValue, unit: "명", color: "var(--muted)" },
+             { label: "보정 성과", value: `${ratio}%`, unit: "", color: m.ink },
+           ].map((s, i) => (
+             <div
+diff --git a/src/components/dashboard/WeekdayAnomaly.jsx b/src/components/dashboard/WeekdayAnomaly.jsx
+index 70ae82b..217a3db 100644
+--- a/src/components/dashboard/WeekdayAnomaly.jsx
++++ b/src/components/dashboard/WeekdayAnomaly.jsx
+@@ -122,7 +122,7 @@ function BarRow({ label, value, max, color }) {
+         />
+       </div>
+       <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>
+-        {value}
++        {typeof value === "number" ? value.toFixed(1) : value}
+       </div>
+     </div>
+   );
+@@ -190,8 +190,8 @@ export default function WeekdayAnomaly({ weekday }) {
+           }}
+         >
+           {[
+-            { label: `오늘(${dowLabel}) 방문`, value: realValue, unit: "명", color: "var(--ink)" },
+-            { label: `${dowLabel}요일 평균`, value: expectValue, unit: "명", color: "var(--muted)" },
++            { label: `오늘(${dowLabel}) 방문`, value: typeof realValue === "number" ? realValue.toFixed(1) : realValue, unit: "명", color: "var(--ink)" },
++            { label: `${dowLabel}요일 평균`, value: typeof expectValue === "number" ? expectValue.toFixed(1) : expectValue, unit: "명", color: "var(--muted)" },
+             {
+               label: "평균 대비 편차",
+               value: `${diff > 0 ? "+" : ""}${diffPct}%`,
+diff --git a/src/components/layout/Sidebar.jsx b/src/components/layout/Sidebar.jsx
+index a2fceb9..1ba1683 100644
+--- a/src/components/layout/Sidebar.jsx
++++ b/src/components/layout/Sidebar.jsx
+@@ -14,7 +14,7 @@ export default function Sidebar() {
+   const { pathname } = useLocation()
+ 
+   const isActive = id => {
+-    if (id === "intro")     return pathname === "/"
++    if (id === "intro")     return pathname === "/intro" || pathname === "/"
+     if (id === "dashboard") return pathname === "/dashboard"
+     if (id === "analytics") return pathname === "/analytics"
+     if (id === "settings")  return pathname === "/settings"
+@@ -23,7 +23,7 @@ export default function Sidebar() {
+ 
+   return (
+     <aside className="sb">
+-      <Link to="/" className="sb-brand" style={{textDecoration:"none", color:"inherit"}}>
++      <Link to="/intro" className="sb-brand" style={{textDecoration:"none", color:"inherit"}}>
+         <div className="sb-mark" aria-hidden="true"></div>
+         <div>
+           <div className="sb-name">Spotline</div>
+diff --git a/src/components/ui/DatePicker.jsx b/src/components/ui/DatePicker.jsx
+new file mode 100644
+index 0000000..249de07
+--- /dev/null
++++ b/src/components/ui/DatePicker.jsx
+@@ -0,0 +1,121 @@
++import { useState, useRef, useEffect } from 'react';
++
++const DATA_START = '2026-04-24';
++const DATA_END   = '2026-05-23';
++const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
++const DOW_LABELS   = ['일','월','화','수','목','금','토'];
++
++function pad(n) { return String(n).padStart(2, '0'); }
++function toStr(y, m, d) { return `${y}-${pad(m+1)}-${pad(d)}`; }
++function inRange(s) { return s >= DATA_START && s <= DATA_END; }
++
++export default function DatePicker({ day, setDay }) {
++  const [open, setOpen] = useState(false);
++  const [vy, setVy] = useState(() => parseInt(day.slice(0, 4)));
++  const [vm, setVm] = useState(() => parseInt(day.slice(5, 7)) - 1);
++  const ref = useRef(null);
++
++  useEffect(() => {
++    if (!open) return;
++    const close = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
++    document.addEventListener('mousedown', close);
++    return () => document.removeEventListener('mousedown', close);
++  }, [open]);
++
++  const prevMonth = () => { if (vm === 0) { setVy(y => y-1); setVm(11); } else setVm(m => m-1); };
++  const nextMonth = () => { if (vm === 11) { setVy(y => y+1); setVm(0); } else setVm(m => m+1); };
++
++  const firstDow    = new Date(vy, vm, 1).getDay();
++  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
++  const cells = Array(firstDow).fill(null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
++
++  const [dy, dm, dd] = day.split('-').map(Number);
++  const hasData = inRange(day);
++
++  return (
++    <div ref={ref} style={{ position: 'relative', marginLeft: 'auto' }}>
++      {/* 트리거 버튼 */}
++      <button onClick={() => setOpen(o => !o)} style={{
++        all: 'unset', cursor: 'default', display: 'inline-flex', alignItems: 'center', gap: 6,
++        padding: '4px 10px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
++        border: `1px solid ${open ? 'var(--accent)' : hasData ? 'oklch(0.82 0.06 155)' : 'oklch(0.82 0.06 25)'}`,
++        background: open
++          ? 'var(--accent-soft)'
++          : hasData ? 'oklch(0.97 0.02 155)' : 'oklch(0.97 0.02 25)',
++        color: hasData ? 'oklch(0.38 0.12 155)' : 'oklch(0.50 0.14 25)',
++      }}>
++        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
++          <rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
++          <path d="M5 1v3M11 1v3M1 7h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
++        </svg>
++        {dy}년 {dm}월 {dd}일
++        <span style={{
++          fontSize: 10, padding: '1px 5px', borderRadius: 5, fontWeight: 700,
++          background: hasData ? 'oklch(0.88 0.10 155)' : 'oklch(0.88 0.10 25)',
++          color: hasData ? 'oklch(0.35 0.14 155)' : 'oklch(0.45 0.16 25)',
++        }}>
++          {hasData ? '데이터 있음' : '데이터 없음'}
++        </span>
++      </button>
++
++      {/* 캘린더 팝오버 */}
++      {open && (
++        <div style={{
++          position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300,
++          background: '#fff', border: '1px solid var(--line-2)', borderRadius: 14,
++          boxShadow: '0 8px 32px rgba(0,0,0,0.14)', padding: '14px 14px 10px', width: 256,
++        }}>
++          {/* 월 네비 */}
++          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
++            <button onClick={prevMonth} style={{ all:'unset', cursor:'default', width:26, height:26, borderRadius:6, display:'grid', placeItems:'center', fontSize:17, color:'var(--muted)', lineHeight:1 }}>‹</button>
++            <span style={{ fontSize: 13, fontWeight: 700 }}>{vy}년 {MONTH_LABELS[vm]}</span>
++            <button onClick={nextMonth} style={{ all:'unset', cursor:'default', width:26, height:26, borderRadius:6, display:'grid', placeItems:'center', fontSize:17, color:'var(--muted)', lineHeight:1 }}>›</button>
++          </div>
++
++          {/* 요일 헤더 */}
++          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:2 }}>
++            {DOW_LABELS.map((d, i) => (
++              <div key={d} style={{ textAlign:'center', fontSize:10, paddingBottom:4, fontWeight:600, color: i===0||i===6 ? 'oklch(0.60 0.13 295)' : 'var(--muted)' }}>{d}</div>
++            ))}
++          </div>
++
++          {/* 날짜 셀 */}
++          <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
++            {cells.map((d, i) => {
++              if (!d) return <div key={i}/>;
++              const s = toStr(vy, vm, d);
++              const avail = inRange(s);
++              const sel   = s === day;
++              const dow   = (firstDow + d - 1) % 7;
++              const wknd  = dow === 0 || dow === 6;
++              return (
++                <button key={i} onClick={() => { setDay(s); setOpen(false); }} style={{
++                  all:'unset', textAlign:'center', cursor:'default', borderRadius:7,
++                  padding:'5px 0', fontSize:12, fontWeight: sel ? 700 : 400, position:'relative',
++                  background: sel ? 'var(--accent)' : avail ? 'oklch(0.97 0.02 155)' : 'transparent',
++                  color: sel ? '#fff' : avail ? (wknd ? 'oklch(0.55 0.13 295)' : 'var(--ink)') : 'oklch(0.82 0.01 250)',
++                }}>
++                  {d}
++                  {avail && !sel && (
++                    <span style={{ position:'absolute', bottom:2, left:'50%', transform:'translateX(-50%)', width:3, height:3, borderRadius:'50%', display:'block', background:'oklch(0.55 0.16 155)' }}/>
++                  )}
++                </button>
++              );
++            })}
++          </div>
++
++          {/* 범례 */}
++          <div style={{ marginTop:10, paddingTop:8, borderTop:'1px solid var(--line)', display:'flex', gap:12, fontSize:10.5, color:'var(--muted)' }}>
++            <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
++              <span style={{ width:8, height:8, borderRadius:2, background:'oklch(0.97 0.02 155)', border:'1px solid oklch(0.78 0.08 155)', display:'inline-block' }}/>데이터 있음
++            </span>
++            <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
++              <span style={{ width:8, height:8, borderRadius:2, background:'#F1F3F6', display:'inline-block' }}/>데이터 없음
++            </span>
++            <span style={{ marginLeft:'auto', fontFamily:'JetBrains Mono', fontSize:9.5, color:'var(--muted-2)' }}>~{DATA_END}</span>
++          </div>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/src/components/ui/InfoTooltip.jsx b/src/components/ui/InfoTooltip.jsx
+deleted file mode 100644
+index ed32657..0000000
+--- a/src/components/ui/InfoTooltip.jsx
++++ /dev/null
+@@ -1,49 +0,0 @@
+-import { useState, useEffect, useRef } from 'react';
+-import { Ic } from './Icons';
+-
+-export default function InfoTooltip({ text }) {
+-  const [open, setOpen] = useState(false);
+-  const ref = useRef(null);
+-
+-  useEffect(() => {
+-    if (!open) return;
+-    function handleClick(e) {
+-      if (!ref.current?.contains(e.target)) setOpen(false);
+-    }
+-    document.addEventListener('mousedown', handleClick);
+-    return () => document.removeEventListener('mousedown', handleClick);
+-  }, [open]);
+-
+-  return (
+-    <div ref={ref} style={{ position: 'relative', display: 'flex' }}>
+-      <span
+-        onClick={() => setOpen(o => !o)}
+-        style={{ cursor: 'pointer', display: 'flex', color: open ? 'var(--ink-2)' : 'var(--muted-2)' }}
+-      >
+-        <Ic.Info />
+-      </span>
+-      {open && (
+-        <div
+-          style={{
+-            position: 'absolute',
+-            top: 'calc(100% + 8px)',
+-            right: 0,
+-            width: 240,
+-            background: '#fff',
+-            border: '1px solid var(--line)',
+-            borderRadius: 10,
+-            padding: '12px 14px',
+-            fontSize: 12.5,
+-            lineHeight: 1.7,
+-            color: 'var(--ink-2)',
+-            boxShadow: '0 4px 20px rgba(0,0,0,0.09)',
+-            zIndex: 100,
+-            whiteSpace: 'pre-wrap',
+-          }}
+-        >
+-          {text}
+-        </div>
+-      )}
+-    </div>
+-  );
+-}
+diff --git a/src/components/ui/KPI.jsx b/src/components/ui/KPI.jsx
+index 98b9d73..ddb26d2 100644
+--- a/src/components/ui/KPI.jsx
++++ b/src/components/ui/KPI.jsx
+@@ -8,7 +8,6 @@ export default function KPI({ icon, iconBg, iconFg, label, value, unit, delta, s
+       <div className="kpi-h">
+         <div className="ico" style={{ background: iconBg, color: iconFg }}>{icon}</div>
+         <div className="lbl">{label}</div>
+-
+       </div>
+       <div className="kpi-val mono">
+         {value}{unit && <span className="unit">{unit}</span>}
+diff --git a/src/pages/AnalyticsPage.jsx b/src/pages/AnalyticsPage.jsx
+index 2c7bfda..9501880 100644
+--- a/src/pages/AnalyticsPage.jsx
++++ b/src/pages/AnalyticsPage.jsx
+@@ -9,25 +9,97 @@ import StayTab from '../components/analytics/tabs/StayTab'
+ import FunnelTab from '../components/analytics/tabs/FunnelTab'
+ import WeatherTab from '../components/analytics/tabs/WeatherTab'
+ import { Ic } from '../components/ui/Icons'
+-import { TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakToggle } from '../components/ui/TweaksPanel'
++import { TweaksPanel, TweakSection, TweakColor, TweakToggle, TweakNumber } from '../components/ui/TweaksPanel'
+ import { useTweaks } from '../hooks/useTweaks'
++import {
++  fetchHourlyPopulation,
++  fetchCoreCustomers,
++  fetchWeatherImpact,
++  fetchWeekdayPatterns,
++  fetchVisitCount,
++  fetchTomorrowPrediction,
++  fetchNextWeekPrediction,
++} from '../api/index'
+ 
+ const TWEAK_DEFAULTS = {
+   accent: '#10B981',
+-  chartStyle: 'area',
+-  compareMode: 'yesterday',
++  videoId: 1,
+   showOutliers: true,
+ }
+ 
++const DATA_START = '2026-04-24'
++const DATA_END   = '2026-05-23'
++
++function isInRange(day) {
++  return day >= DATA_START && day <= DATA_END
++}
++
+ export default function AnalyticsPage() {
+   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
+   const [tab, setTab] = useState('overview')
+-  const [range, setRange] = useState('30d')
++  const [day, setDay] = useState('2026-05-23')
++
++  const dataAvailable = isInRange(day)
++
++  const [data, setData] = useState({
++    ageGroups: null,
++    coreCustomer: null,
++    weatherImpact: null,
++    weekdayPatterns: null,
++    visits: null,
++    tomorrow: null,
++    nextWeek: null,
++    loading: true,
++  })
+ 
+   useEffect(() => {
+     document.documentElement.style.setProperty('--accent', t.accent)
+   }, [t.accent])
+ 
++  useEffect(() => {
++    if (!isInRange(day)) {
++      setData({ ageGroups: null, coreCustomer: null, weatherImpact: null,
++        weekdayPatterns: null, visits: null, tomorrow: null, nextWeek: null, loading: false })
++      return
++    }
++
++    let cancelled = false
++    const startAt = `${day}T00:00:00`
++    const endAt = `${day}T23:59:59`
++
++    // visits/count는 30일 윈도우로 트렌드 데이터 확보
++    const trendDate = new Date(day)
++    trendDate.setDate(trendDate.getDate() - 29)
++    const trendStr = trendDate.toISOString().slice(0, 10)
++    const trendStartAt = `${trendStr < DATA_START ? DATA_START : trendStr}T00:00:00`
++
++    setData(d => ({ ...d, loading: true }))
++
++    Promise.allSettled([
++      fetchHourlyPopulation(startAt, endAt),
++      fetchCoreCustomers(startAt, endAt),
++      fetchWeatherImpact(startAt),
++      ...Array.from({ length: 7 }, (_, i) => fetchWeekdayPatterns(startAt, i)),
++      fetchVisitCount(trendStartAt, endAt),
++      fetchTomorrowPrediction(),
++      fetchNextWeekPrediction(),
++    ]).then(([age, core, weather, wd0, wd1, wd2, wd3, wd4, wd5, wd6, visits, tomorrow, nextWeek]) => {
++      if (cancelled) return
++      setData({
++        ageGroups: age.status === 'fulfilled' ? age.value : null,
++        coreCustomer: core.status === 'fulfilled' ? core.value : null,
++        weatherImpact: weather.status === 'fulfilled' ? weather.value : null,
++        weekdayPatterns: [wd0, wd1, wd2, wd3, wd4, wd5, wd6].map(r => r.status === 'fulfilled' ? r.value : null),
++        visits: visits.status === 'fulfilled' ? visits.value : null,
++        tomorrow: tomorrow.status === 'fulfilled' ? tomorrow.value : null,
++        nextWeek: nextWeek.status === 'fulfilled' ? nextWeek.value : null,
++        loading: false,
++      })
++    })
++
++    return () => { cancelled = true }
++  }, [day, t.videoId])
++
+   return (
+     <div className="app">
+       <Sidebar/>
+@@ -35,7 +107,7 @@ export default function AnalyticsPage() {
+         <header className="hdr">
+           <div>
+             <div className="hdr-title">분석 워크스페이스</div>
+-            <div className="hdr-sub">2026.04.17 – 05.16 · 30일 · 코지 카페 · 강남점</div>
++            <div className="hdr-sub">{day} · 하루 분석</div>
+           </div>
+           <div className="hdr-right">
+             <div className="ai-status"><span className="d"/>AI 처리 정상</div>
+@@ -45,30 +117,44 @@ export default function AnalyticsPage() {
+           </div>
+         </header>
+ 
+-        <PageHead range={range} setRange={setRange}/>
+-        <TabBar value={tab} onChange={setTab}/>
++        <PageHead day={day} setDay={setDay}/>
++
++        {!dataAvailable && (
++          <div className="content" style={{paddingBottom: 0}}>
++            <div style={{
++              display: 'flex', alignItems: 'center', gap: 10,
++              padding: '12px 16px', borderRadius: 10,
++              background: '#FFF7ED', border: '1px solid #FED7AA',
++              color: '#92400E', fontSize: 13,
++            }}>
++              <Ic.Info style={{flexShrink: 0, color: '#F97316'}}/>
++              <span>
++                선택한 날짜(<strong>{day}</strong>)의 데이터가 없습니다.
++                저장된 데이터 범위는 <strong>{DATA_START}</strong> ~ <strong>{DATA_END}</strong>입니다.
++              </span>
++            </div>
++          </div>
++        )}
++
++        <TabBar value={tab} onChange={setTab} day={day} setDay={setDay}/>
+ 
+         <div className="content">
+-          {tab === 'overview' && <OverviewTab/>}
+-          {tab === 'visitors' && <VisitorsTab/>}
++          {tab === 'overview' && <OverviewTab data={data} day={day}/>}
++          {tab === 'visitors' && <VisitorsTab data={data} day={day}/>}
+           {tab === 'stay'     && <StayTab/>}
+           {tab === 'funnel'   && <FunnelTab/>}
+-          {tab === 'weather'  && <WeatherTab/>}
++          {tab === 'weather'  && <WeatherTab data={data} day={day}/>}
+         </div>
+       </div>
+ 
+       <TweaksPanel title="Tweaks">
++        <TweakSection label="데이터"/>
++        <TweakNumber label="비디오 ID" value={t.videoId} min={1} step={1}
++          onChange={(v) => setTweak("videoId", v)}/>
+         <TweakSection label="비주얼"/>
+         <TweakColor label="액센트" value={t.accent}
+           options={["#3B7CF6", "#2563EB", "#0EA5E9", "#7C3AED", "#10B981"]}
+           onChange={(v) => setTweak("accent", v)}/>
+-        <TweakRadio label="차트 스타일" value={t.chartStyle}
+-          options={[{value:"area", label:"영역형"}, {value:"line", label:"선형"}]}
+-          onChange={(v) => setTweak("chartStyle", v)}/>
+-        <TweakSection label="비교"/>
+-        <TweakRadio label="비교 기간" value={t.compareMode}
+-          options={[{value:"yesterday", label:"전일"}, {value:"lastweek", label:"전주"}, {value:"lastmonth", label:"전월"}]}
+-          onChange={(v) => setTweak("compareMode", v)}/>
+         <TweakToggle label="이상치 표시" value={t.showOutliers} onChange={(v) => setTweak("showOutliers", v)}/>
+       </TweaksPanel>
+     </div>
+diff --git a/src/pages/DashboardPage.jsx b/src/pages/DashboardPage.jsx
+index f3604b6..28ab62a 100644
+--- a/src/pages/DashboardPage.jsx
++++ b/src/pages/DashboardPage.jsx
+@@ -1,18 +1,18 @@
+ import { useEffect, useState } from "react";
+-import InfoTooltip from "../components/ui/InfoTooltip";
+ import Sidebar from "../components/layout/Sidebar";
+ import Header from "../components/dashboard/Header";
+ import TrendChart from "../components/dashboard/TrendChart";
+ import KPI from "../components/ui/KPI";
+ import { Ic } from "../components/ui/Icons";
+ import CoreCustomerProfile from "../components/dashboard/CoreCustomerProfile";
+-import TimeDemographics from "../components/dashboard/TimeDemographics";
+ import WeatherPerformance from "../components/dashboard/WeatherPerformance";
+ import WeekdayAnomaly from "../components/dashboard/WeekdayAnomaly";
+ import PredictionDetail from "../components/dashboard/PredictionDetail";
+ import Heatmap from "../components/analytics/charts/Heatmap";
+ import Donut from "../components/analytics/charts/Donut";
+ import "../styles/analytics.css";
++import DatePicker from "../components/ui/DatePicker";
++import PremiumModal from "../components/ui/PremiumModal";
+ import {
+   TweaksPanel,
+   TweakSection,
+@@ -31,6 +31,7 @@ import {
+   fetchDailyBriefing,
+   fetchRawAnalytics,
+   fetchMarketingRecommendations,
++  fetchDailyVisits,
+ } from "../api/index";
+ 
+ const TWEAK_DEFAULTS = {
+@@ -38,6 +39,7 @@ const TWEAK_DEFAULTS = {
+   showPrivacyBadge: true,
+ };
+ 
++const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
+ 
+ const AGE_KEYS = [
+   { key: "age10s", label: "10대" },
+@@ -47,17 +49,6 @@ const AGE_KEYS = [
+   { key: "age50s", label: "50대+" },
+ ];
+ 
+-function todayRange() {
+-  const now = new Date();
+-  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+-  return {
+-    startAt: s.toISOString(),
+-    endAt: now.toISOString(),
+-    day: s.toISOString(),
+-    dayOfWeek: (now.getDay() + 6) % 7,
+-  };
+-}
+-
+ function formatDwell(sec) {
+   if (!sec) return "—";
+   if (sec < 60) return `${Math.round(sec)}초`;
+@@ -71,7 +62,7 @@ function genderLabel(g) {
+ }
+ 
+ function ageLabel(a) {
+-  if (!a) return "—";
++  if (!a || a === "UNKNOWN" || a === "unknown") return "—";
+   return a.replace("s", "대");
+ }
+ 
+@@ -98,10 +89,12 @@ function resultMeta(r) {
+ export default function DashboardPage() {
+   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+   const [state, setState] = useState({ data: {}, loading: true });
++  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+   const [briefingLoading, setBriefingLoading] = useState(false);
+   const [marketingLoading, setMarketingLoading] = useState(false);
++  const [day, setDay] = useState("2026-05-23");
+ 
+-  const today = new Date();
++  const today = new Date(day);
+   const dateLabel = today.toLocaleDateString("ko-KR", {
+     year: "numeric",
+     month: "long",
+@@ -109,27 +102,55 @@ export default function DashboardPage() {
+     weekday: "long",
+   });
+ 
++  const getSeedVideoId = (targetDay) => {
++    const start = new Date("2026-04-24");
++    const current = new Date(targetDay);
++    const diffTime = current - start;
++    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
++    if (diffDays >= 0 && diffDays < 30) {
++      return diffDays + 1; // 1부터 30까지
++    }
++    return null;
++  };
++
++  function todayRange() {
++    const now = new Date();
++    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
++    const todayDay = s.toISOString().slice(0, 10);
++    return {
++      startAt: `${todayDay}T00:00:00`,
++      endAt: `${todayDay}T23:59:59`,
++      day: todayDay,
++      dayOfWeek: (now.getDay() + 6) % 7,
++    };
++  }
++
+   useEffect(() => {
+     document.documentElement.style.setProperty("--accent", t.accent);
+   }, [t.accent]);
+ 
++  // 1) 최초 마운트 시 오늘 날짜 기준으로 대시보드 전체 데이터를 한 번만 호출
+   useEffect(() => {
+-    const { startAt, endAt, day, dayOfWeek } = todayRange();
++    const { startAt, endAt, day: todayDay, dayOfWeek } = todayRange();
+     const sixtyDaysAgo = new Date();
+     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+     sixtyDaysAgo.setHours(0, 0, 0, 0);
+     const videoId = localStorage.getItem("last_video_id");
++
++    setState((s) => ({ ...s, loading: true }));
++
+     Promise.allSettled([
+       fetchCoreCustomers(startAt, endAt),
+       fetchHourlyPopulation(startAt, endAt),
+-      fetchWeatherImpact(day),
+-      fetchWeekdayPatterns(day, dayOfWeek),
++      fetchWeatherImpact(`${todayDay}T00:00:00`),
++      fetchWeekdayPatterns(`${todayDay}T00:00:00`, dayOfWeek),
+       fetchVisitCount(sixtyDaysAgo.toISOString(), endAt),
+       fetchTomorrowPrediction(),
+       fetchNextWeekPrediction(),
+       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
++      fetchDailyVisits(todayDay),
+     ]).then(
+-      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw]) => {
++      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits]) => {
+         setState({
+           loading: false,
+           data: {
+@@ -141,14 +162,46 @@ export default function DashboardPage() {
+             tomorrow: tomorrow.status === "fulfilled" ? tomorrow.value : null,
+             nextWeek: nextWeek.status === "fulfilled" ? nextWeek.value : null,
+             raw: raw.status === "fulfilled" ? raw.value : null,
++            dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : null,
+           },
+         });
+       },
+     );
+   }, []);
+ 
++  // 2) 날짜 변경 시, 오직 4개 핵심 KPI 관련 API만 해당 날짜 하루 치 데이터로 교체 (나머지는 유지)
++  useEffect(() => {
++    if (day === "2026-05-23" && state.data.visits) {
++      // 초기 오늘 날짜 데이터가 이미 로드 완료되었다면 불필요한 재호출 차단
++      return;
++    }
++
++    const startAt = `${day}T00:00:00`;
++    const endAt = `${day}T23:59:59`;
++    const seedVideoId = getSeedVideoId(day);
++    const videoId = seedVideoId || localStorage.getItem("last_video_id") || 1;
++
++    Promise.allSettled([
++      fetchCoreCustomers(startAt, endAt),
++      fetchWeatherImpact(`${day}T00:00:00`),
++      videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
++      fetchDailyVisits(day),
++    ]).then(([core, weather, raw, dailyVisits]) => {
++      setState((s) => ({
++        ...s,
++        data: {
++          ...s.data,
++          core: core.status === "fulfilled" ? core.value : s.data.core,
++          weather: weather.status === "fulfilled" ? weather.value : s.data.weather,
++          raw: raw.status === "fulfilled" ? raw.value : s.data.raw,
++          dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : s.data.dailyVisits,
++        },
++      }));
++    });
++  }, [day]);
++
+   const { data, loading } = state;
+-  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw } =
++  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits } =
+     data;
+ 
+   const [briefing, setBriefing] = useState(null);
+@@ -180,9 +233,13 @@ export default function DashboardPage() {
+ 
+   const weatherMeta = resultMeta(weather?.result);
+ 
+-  const coreLabel = core
+-    ? `${ageLabel(core.age)} ${genderLabel(core.gender)}`
+-    : "—";
++  const coreLabel = (() => {
++    if (!core) return "—";
++    const age = ageLabel(core.age);
++    const gender = genderLabel(core.gender);
++    const parts = [age, gender].filter(v => v !== "—");
++    return parts.length > 0 ? parts.join(" ") : "—";
++  })();
+ 
+   const ageGroups = AGE_KEYS.map(({ key, label }) => ({
+     label,
+@@ -198,14 +255,20 @@ export default function DashboardPage() {
+       ];
+     }
+     const f = persons.filter((p) => p.gender === "female").length;
+-    const fPct = Math.round((f / persons.length) * 100);
++    const fPct = Number(((f / persons.length) * 100).toFixed(1));
+     return [
+       { label: "여성", pct: fPct, color: "oklch(0.7 0.13 0)" },
+-      { label: "남성", pct: 100 - fPct, color: "oklch(0.62 0.13 250)" },
++      { label: "남성", pct: Number((100 - fPct).toFixed(1)), color: "oklch(0.62 0.13 250)" },
+     ];
+   })();
+ 
++  const nextWeekArr = (nextWeek?.result ?? []).map((v) =>
++    typeof v === "object" ? (v?.expectedVisits ?? 0) : v,
++  );
++  const maxNextWeek = Math.max(...nextWeekArr, 1);
+ 
++  const visitsTrend = visits?.data?.[0];
++  const visitCount = visitsTrend?.length > 0 ? Math.round(visitsTrend[visitsTrend.length - 1]) : null;
+ 
+   return (
+     <div className="app">
+@@ -228,6 +291,7 @@ export default function DashboardPage() {
+                     : "오늘 매장 인사이트를 확인하세요."}
+                 </h1>
+               </div>
++              <DatePicker day={day} setDay={setDay} />
+             </div>
+           </div>
+ 
+@@ -238,12 +302,20 @@ export default function DashboardPage() {
+               icon={<Ic.Users />}
+               iconBg="oklch(0.95 0.03 250)"
+               iconFg="oklch(0.48 0.16 250)"
+-              value={raw?.summary?.totalVisitors ?? "—"}
+-              unit={raw ? "명" : ""}
+-              hint="분석된 영상 기준"
++              value={
++                dailyVisits?.totalVisits != null
++                  ? (typeof dailyVisits.totalVisits === "number"
++                      ? (Number.isInteger(dailyVisits.totalVisits)
++                          ? dailyVisits.totalVisits.toLocaleString()
++                          : dailyVisits.totalVisits.toFixed(1))
++                      : dailyVisits.totalVisits)
++                  : "—"
++              }
++              unit={dailyVisits?.totalVisits != null ? "명" : ""}
++              hint="선택 날짜 기준"
+             />
+             <KPI
+-              label="오늘 핵심 고객"
++              label="핵심 고객"
+               icon={<Ic.Users />}
+               iconBg="oklch(0.95 0.03 250)"
+               iconFg="oklch(0.48 0.16 250)"
+@@ -259,18 +331,18 @@ export default function DashboardPage() {
+               hint="분석된 영상 기준"
+             />
+             <KPI
+-              label="오늘 날씨 대비 실제 성과"
++              label="날씨 보정 성과"
+               icon={<Ic.Cloud />}
+               iconBg={weatherMeta.iconBg}
+               iconFg={weatherMeta.iconFg}
+               value={
+                 weather
+-                  ? `${Math.round((weather.realValue / weather.expectValue) * 100)}%`
++                  ? `${((weather.realValue / weather.expectValue) * 100).toFixed(1)}%`
+                   : "—"
+               }
+               hint={
+                 weather
+-                  ? `${weatherMeta.text} · 기대 ${weather.expectValue}명 대비`
++                  ? `${weatherMeta.text} · 기대 ${weather.expectValue?.toFixed(1)}명 대비`
+                   : "날씨 영향 보정 후"
+               }
+             />
+@@ -283,11 +355,10 @@ export default function DashboardPage() {
+               <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
+               <div className="right">
+                 <span className="chip dot">날씨 보정값</span>
+-                <InfoTooltip text={'최근 60일간 방문자 수의 진짜 흐름을 보여줘요.\n\n하루하루 들쭉날쭉한 노이즈를 줄이고, 5·10·20·60일 이동평균선으로 실제 트렌드를 읽을 수 있어요. 파란 점선은 날씨 영향을 보정한 방문자 수예요.'} />
+               </div>
+             </div>
+             <div className="card-b" style={{ padding: "8px 12px 14px" }}>
+-              <TrendChart data={visits} />
++              <TrendChart data={visits} selectedDay={day} />
+             </div>
+           </div>
+ 
+@@ -297,7 +368,6 @@ export default function DashboardPage() {
+               <div className="card-h">
+                 <h3>오늘 연령대 분포</h3>
+                 <span className="sub">· 시간대별 인구통계</span>
+-                <div className="right"><InfoTooltip text={'오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요.'} /></div>
+               </div>
+               <div className="card-b">
+                 <div className="ages">
+@@ -318,9 +388,9 @@ export default function DashboardPage() {
+               </div>
+             </div>
+ 
+-            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact />
++            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact={true} />
+ 
+-            <CoreCustomerProfile persons={raw?.persons} />
++            <CoreCustomerProfile core={core} />
+           </div>
+ 
+           {/* AI 일일 브리핑 + AI 마케팅 추천 */}
+@@ -339,7 +409,6 @@ export default function DashboardPage() {
+                   >
+                     {briefingLoading ? "생성 중..." : "생성하기"}
+                   </button>
+-                  <InfoTooltip text={'오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요. 하루를 마무리하며 오늘을 복기하고 싶을 때 눌러보세요.'} />
+                 </div>
+               </div>
+               <div className="card-b">
+@@ -381,7 +450,6 @@ export default function DashboardPage() {
+                   >
+                     {marketingLoading ? "생성 중..." : "생성하기"}
+                   </button>
+-                  <InfoTooltip text={'오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요.'} />
+                 </div>
+               </div>
+               <div className="card-b">
+@@ -416,10 +484,6 @@ export default function DashboardPage() {
+             <WeekdayAnomaly weekday={weekday} />
+           </div>
+ 
+-
+-          {/* 시간대별 인구통계 변화 */}
+-          <TimeDemographics persons={raw?.persons} />
+-
+           {/* PRO: 히트맵 + 성별 분포 */}
+           <div className="grid-2">
+             <div className="card" style={{ position: "relative" }}>
+@@ -428,16 +492,17 @@ export default function DashboardPage() {
+                 <span className="sub">· 방문자 밀도</span>
+                 <div className="right">
+                   <span
++                    onClick={() => setIsPremiumModalOpen(true)}
+                     className="chip"
+                     style={{
+                       background: "oklch(0.92 0.06 290)",
+                       color: "oklch(0.42 0.18 290)",
+                       fontWeight: 700,
++                      cursor: "pointer"
+                     }}
+                   >
+                     PRO
+                   </span>
+-                  <InfoTooltip text={'요일과 시간대를 격자로 나눠, 어느 타이밍에 방문자가 몰리는지 색상으로 보여줘요.\n\n피크 타임과 한산한 시간대를 한눈에 파악해서 효율적인 운영 계획을 세울 수 있어요. PRO 플랜에서 이용 가능해요.'} />
+                 </div>
+               </div>
+               <div
+@@ -455,6 +520,7 @@ export default function DashboardPage() {
+                   <Heatmap />
+                 </div>
+                 <div
++                  onClick={() => setIsPremiumModalOpen(true)}
+                   style={{
+                     position: "absolute",
+                     inset: 0,
+@@ -463,7 +529,12 @@ export default function DashboardPage() {
+                     alignItems: "center",
+                     justifyContent: "center",
+                     gap: 8,
++                    cursor: "pointer",
++                    background: "rgba(255, 255, 255, 0.05)",
++                    transition: "background 0.2s"
+                   }}
++                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
++                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                 >
+                   <Ic.Lock color="oklch(0.42 0.18 290)" />
+                   <div
+@@ -495,16 +566,17 @@ export default function DashboardPage() {
+                 <span className="sub">· AI 추정 · 익명</span>
+                 <div className="right">
+                   <span
++                    onClick={() => setIsPremiumModalOpen(true)}
+                     className="chip"
+                     style={{
+                       background: "oklch(0.92 0.06 290)",
+                       color: "oklch(0.42 0.18 290)",
+                       fontWeight: 700,
++                      cursor: "pointer"
+                     }}
+                   >
+                     PRO
+                   </span>
+-                  <InfoTooltip text={'Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요. PRO 플랜에서 이용 가능해요.'} />
+                 </div>
+               </div>
+               <div
+@@ -546,6 +618,7 @@ export default function DashboardPage() {
+                   </div>
+                 </div>
+                 <div
++                  onClick={() => setIsPremiumModalOpen(true)}
+                   style={{
+                     position: "absolute",
+                     inset: 0,
+@@ -554,7 +627,12 @@ export default function DashboardPage() {
+                     alignItems: "center",
+                     justifyContent: "center",
+                     gap: 8,
++                    cursor: "pointer",
++                    background: "rgba(255, 255, 255, 0.05)",
++                    transition: "background 0.2s"
+                   }}
++                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
++                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                 >
+                   <Ic.Lock color="oklch(0.42 0.18 290)" />
+                   <div
+@@ -644,6 +722,7 @@ export default function DashboardPage() {
+                 더욱 전문적인 분석을 기반으로 프리미엄이 해답을 찾아드릴게요.
+               </p>
+               <button
++                onClick={() => setIsPremiumModalOpen(true)}
+                 style={{
+                   alignSelf: "flex-start",
+                   padding: "11px 20px",
+@@ -756,7 +835,7 @@ export default function DashboardPage() {
+               style={{ padding: "6px 4px 12px", fontSize: 12 }}
+             >
+               <Ic.Shield color="#9AA3AF" />본 대시보드는 Vision AI 기반 익명
+-              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별, 영상 저장은
++              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별은
+               수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
+             </div>
+           )}
+@@ -779,6 +858,9 @@ export default function DashboardPage() {
+           onChange={(v) => setTweak("showPrivacyBadge", v)}
+         />
+       </TweaksPanel>
++      {isPremiumModalOpen && (
++        <PremiumModal onClose={() => setIsPremiumModalOpen(false)} />
++      )}
+     </div>
+   );
+ }
+diff --git a/src/pages/IntroPage.jsx b/src/pages/IntroPage.jsx
+index 8409183..7cea536 100644
+--- a/src/pages/IntroPage.jsx
++++ b/src/pages/IntroPage.jsx
+@@ -3,28 +3,14 @@ import { useNavigate } from "react-router-dom";
+ import { Ic } from "../components/ui/Icons";
+ import { uploadVideo, fetchVideoStatus, fetchRawAnalytics } from "../api/index";
+ 
+-function fmt(d) {
+-  const pad = (n) => String(n).padStart(2, "0");
+-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+-}
+-
+ function congestionMeta(c) {
+-  if (c === "low")
+-    return {
+-      text: "낮음",
+-      color: "oklch(0.42 0.12 155)",
+-      bg: "var(--good-soft)",
+-    };
+-  if (c === "high")
+-    return {
+-      text: "높음",
+-      color: "oklch(0.45 0.16 25)",
+-      bg: "var(--bad-soft)",
+-    };
++  if (c === "low") return { text: "낮음", color: "oklch(0.42 0.12 155)", bg: "var(--good-soft)" };
++  if (c === "high") return { text: "높음", color: "oklch(0.45 0.16 25)", bg: "var(--bad-soft)" };
+   return { text: "보통", color: "oklch(0.55 0.14 65)", bg: "var(--warn-soft)" };
+ }
+ 
+ function formatDwell(sec) {
++  if (!sec) return "—";
+   if (sec < 60) return `${Math.round(sec)}초`;
+   return `${Math.floor(sec / 60)}분 ${Math.round(sec % 60)}초`;
+ }
+@@ -32,44 +18,28 @@ function formatDwell(sec) {
+ export default function IntroPage() {
+   const navigate = useNavigate();
+   const [phase, setPhase] = useState("idle"); // idle | uploading | analyzing | done | error
+-  const [progress, setProgress] = useState(0);
+-  const [result, setResult] = useState(null);
+   const [drag, setDrag] = useState(false);
++  const [result, setResult] = useState(null);
+   const inputRef = useRef();
+ 
+   const process = useCallback(async (file) => {
+     setPhase("uploading");
+-    setProgress(0);
+     try {
+-      const now = new Date();
+-      const before = new Date(now.getTime() - 60 * 60 * 1000);
+-      const { id } = await uploadVideo(file, fmt(before), fmt(now));
++      const { id } = await uploadVideo(file);
+ 
+       setPhase("analyzing");
+-
+       await new Promise((resolve, reject) => {
+-        let attempts = 0;
+         const timer = setInterval(async () => {
+-          attempts++;
+           try {
+-            const status = await fetchVideoStatus(id);
+-            if (status.progress != null) setProgress(status.progress);
+-            if (status.status === "COMPLETE") {
+-              clearInterval(timer);
+-              resolve();
+-            } else if (status.status === "ERROR" || attempts > 90) {
+-              clearInterval(timer);
+-              reject(new Error("failed"));
+-            }
+-          } catch (e) {
+-            clearInterval(timer);
+-            reject(e);
+-          }
++            const { status } = await fetchVideoStatus(id);
++            if (status === "COMPLETE") { clearInterval(timer); resolve(); }
++            else if (status === "ERROR") { clearInterval(timer); reject(new Error("processing failed")); }
++          } catch (e) { clearInterval(timer); reject(e); }
+         }, 2000);
+       });
+ 
+-      const data = await fetchRawAnalytics(id);
+       localStorage.setItem("last_video_id", id);
++      const data = await fetchRawAnalytics(id);
+       setResult(data);
+       setPhase("done");
+     } catch {
+@@ -88,42 +58,13 @@ export default function IntroPage() {
+     onFile(e.dataTransfer.files[0]);
+   };
+ 
+-  // persons 배열에서 성별·연령대 집계
+   const persons = result?.persons ?? [];
+-  const knownGender = persons.filter((p) => p.gender === "female" || p.gender === "male");
+-  const genderStats =
+-    knownGender.length > 0
+-      ? (() => {
+-          const female = knownGender.filter((p) => p.gender === "female").length;
+-          return {
+-            female: Math.round((female / knownGender.length) * 100),
+-            male: Math.round(((knownGender.length - female) / knownGender.length) * 100),
+-          };
+-        })()
+-      : null;
+-
+-  const knownAge = persons.filter((p) => p.ageGroup && p.ageGroup !== "unknown");
+-  const ageStats =
+-    knownAge.length > 0
+-      ? (() => {
+-          const counts = {};
+-          knownAge.forEach((p) => {
+-            counts[p.ageGroup] = (counts[p.ageGroup] || 0) + 1;
+-          });
+-          const maxV = Math.max(...Object.values(counts));
+-          return Object.entries(counts)
+-            .sort((a, b) => b[1] - a[1])
+-            .map(([k, v]) => ({
+-              label: k.replace("s", "대"),
+-              pct: Math.round((v / knownAge.length) * 100),
+-              width: Math.round((v / maxV) * 100),
+-            }));
+-        })()
+-      : null;
+-
+-  const congestion = result
+-    ? congestionMeta(result.summary.peakCongestion)
+-    : null;
++  const female = persons.filter((p) => p.gender === "female").length;
++  const male = persons.filter((p) => p.gender === "male").length;
++  const genderTotal = female + male;
++  const femalePct = genderTotal > 0 ? Number(((female / genderTotal) * 100).toFixed(1)) : 50.0;
++  const malePct = Number((100 - femalePct).toFixed(1));
++  const congestion = result ? congestionMeta(result.summary?.peakCongestion) : null;
+ 
+   return (
+     <div
+@@ -138,689 +79,207 @@ export default function IntroPage() {
+     >
+       {/* 상단 안내 문구 */}
+       <div style={{ marginBottom: 20, flexShrink: 0 }}>
+-        <h1
+-          style={{
+-            fontSize: 26,
+-            fontWeight: 700,
+-            letterSpacing: "-0.02em",
+-            marginBottom: 8,
+-          }}
+-        >
++        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 8 }}>
+           Vision AI 데모
+         </h1>
+-        <p
+-          style={{
+-            fontSize: 14,
+-            color: "var(--black)",
+-            lineHeight: 1.7,
+-            margin: 0,
+-          }}
+-        >
+-          SpotLine은 매장 방문자 영상을 AI로 분석해 경영 인사이트를 제공하는
+-          서비스입니다.
+-          <br />
++        <p style={{ fontSize: 14, color: "var(--black)", lineHeight: 1.7, margin: 0 }}>
++          SpotLine은 매장 방문자 영상을 AI로 분석해 경영 인사이트를 제공하는 서비스입니다.
+         </p>
+-        <p
+-          style={{
+-            fontSize: 14,
+-            color: "var(--muted)",
+-            lineHeight: 1.7,
+-            margin: "8px 0 0",
+-          }}
+-        >
+-          실제 서비스에서는 매장 CCTV 영상을 실시간으로 수집하지만, 이
+-          데모에서는 영상을 직접 업로드하는 방식으로 동일한 Vision AI 분석
+-          파이프라인을 체험하실 수 있습니다.
++        <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.7, margin: "8px 0 0" }}>
++          실제 서비스에서는 매장 CCTV 영상을 실시간으로 수집하지만, 이 데모에서는 영상을 직접
++          업로드하는 방식으로 동일한 Vision AI 분석 파이프라인을 체험하실 수 있습니다.
+         </p>
+-        <p
+-          style={{
+-            fontSize: 14,
+-            color: "var(--muted)",
+-            lineHeight: 1.7,
+-            margin: "0px 0 0",
+-          }}
+-        >
+-          결과는 대시보드에 누적되며, 데이터가 쌓일수록 더 정확한 통계와 예측,
+-          맞춤형 AI 마케팅 조언을 제공합니다.
++        <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.7, margin: "0px 0 0" }}>
++          결과는 대시보드에 누적되며, 데이터가 쌓일수록 더 정확한 통계와 예측, 맞춤형 AI 마케팅
++          조언을 제공합니다.
+         </p>
+       </div>
+ 
+-      {/* 2열 그리드 — 나머지 공간 모두 차지 */}
+-      <div
+-        style={{
+-          display: "grid",
+-          gridTemplateColumns: "1fr 1fr",
+-          gap: 18,
+-          flex: 1,
+-          minHeight: 0,
+-        }}
+-      >
++      {/* 2열 그리드 */}
++      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, flex: 1, minHeight: 0 }}>
++
+         {/* ── 좌: 업로드 ── */}
+-        <div
+-          className="card"
+-          style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
+-        >
++        <div className="card" style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+           <div className="card-h">
+             <h3>영상 업로드</h3>
+-            <span className="sub">· MP4 </span>
++            <span className="sub">· MP4</span>
+           </div>
+-          <div
+-            className="card-b"
+-            style={{
+-              padding: 24,
+-              flex: 1,
+-              display: "flex",
+-              flexDirection: "column",
+-            }}
+-          >
++          <div className="card-b" style={{ padding: 24, flex: 1, display: "flex", flexDirection: "column" }}>
++
+             {phase === "idle" && (
+               <div
+                 onClick={() => inputRef.current.click()}
+-                onDragOver={(e) => {
+-                  e.preventDefault();
+-                  setDrag(true);
+-                }}
++                onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+                 onDragLeave={() => setDrag(false)}
+                 onDrop={onDrop}
+                 style={{
+                   border: `2px dashed ${drag ? "var(--accent)" : "var(--line-2)"}`,
+                   borderRadius: 12,
+                   background: drag ? "var(--accent-soft)" : "#FAFBFC",
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 16,
+-                  cursor: "pointer",
+-                  transition: "all .15s",
+-                  flex: 1,
++                  display: "flex", flexDirection: "column", alignItems: "center",
++                  justifyContent: "center", gap: 16, cursor: "pointer",
++                  transition: "all .15s", flex: 1,
+                 }}
+               >
+-                <svg
+-                  width="48"
+-                  height="48"
+-                  viewBox="0 0 24 24"
+-                  fill="none"
++                <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                   stroke={drag ? "var(--accent)" : "var(--muted-2)"}
+-                  strokeWidth="1.5"
+-                  strokeLinecap="round"
+-                  strokeLinejoin="round"
+-                >
+-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+-                  <polyline points="17 8 12 3 7 8" />
+-                  <line x1="12" y1="3" x2="12" y2="15" />
++                  strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
++                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
++                  <polyline points="17 8 12 3 7 8"/>
++                  <line x1="12" y1="3" x2="12" y2="15"/>
+                 </svg>
+                 <div style={{ textAlign: "center" }}>
+-                  <div
+-                    style={{
+-                      fontSize: 15,
+-                      fontWeight: 600,
+-                      color: "var(--ink-2)",
+-                    }}
+-                  >
++                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-2)" }}>
+                     드래그하거나 클릭하여 업로드
+                   </div>
+-                  <div
+-                    style={{
+-                      fontSize: 13,
+-                      color: "var(--muted)",
+-                      marginTop: 6,
+-                    }}
+-                  >
++                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>
+                     Vision AI가 방문자 데이터를 추출합니다
+                   </div>
+                 </div>
+-                <input
+-                  ref={inputRef}
+-                  type="file"
+-                  accept="video/*"
+-                  style={{ display: "none" }}
+-                  onChange={(e) => onFile(e.target.files[0])}
+-                />
++                <input ref={inputRef} type="file" accept="video/*" style={{ display: "none" }}
++                  onChange={(e) => onFile(e.target.files[0])}/>
+               </div>
+             )}
+ 
+             {(phase === "uploading" || phase === "analyzing") && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 20,
+-                  flex: 1,
+-                }}
+-              >
++              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, flex: 1 }}>
+                 <div style={{ position: "relative", width: 64, height: 64 }}>
+-                  <svg
+-                    style={{ animation: "intro-spin 1.2s linear infinite" }}
+-                    width="64"
+-                    height="64"
+-                    viewBox="0 0 56 56"
+-                  >
+-                    <circle
+-                      cx="28"
+-                      cy="28"
+-                      r="24"
+-                      fill="none"
+-                      stroke="var(--line-2)"
+-                      strokeWidth="4"
+-                    />
+-                    <circle
+-                      cx="28"
+-                      cy="28"
+-                      r="24"
+-                      fill="none"
+-                      stroke="var(--accent)"
+-                      strokeWidth="4"
+-                      strokeLinecap="round"
+-                      strokeDasharray="60 96"
+-                    />
++                  <svg style={{ animation: "intro-spin 1.2s linear infinite" }} width="64" height="64" viewBox="0 0 56 56">
++                    <circle cx="28" cy="28" r="24" fill="none" stroke="var(--line-2)" strokeWidth="4"/>
++                    <circle cx="28" cy="28" r="24" fill="none" stroke="var(--accent)" strokeWidth="4"
++                      strokeLinecap="round" strokeDasharray="60 96"/>
+                   </svg>
+-                  <div
+-                    style={{
+-                      position: "absolute",
+-                      inset: 0,
+-                      display: "grid",
+-                      placeItems: "center",
+-                    }}
+-                  >
+-                    <Ic.Activity color="var(--accent)" />
++                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
++                    <Ic.Activity color="var(--accent)"/>
+                   </div>
+                 </div>
+                 <div style={{ textAlign: "center" }}>
+                   <div style={{ fontSize: 15, fontWeight: 600 }}>
+-                    {phase === "uploading"
+-                      ? "영상 업로드 중..."
+-                      : "Vision AI 분석 중..."}
++                    {phase === "uploading" ? "영상 업로드 중..." : "Vision AI 분석 중..."}
+                   </div>
+-                  <div
+-                    style={{
+-                      fontSize: 13,
+-                      color: "var(--muted)",
+-                      marginTop: 6,
+-                    }}
+-                  >
+-                    {phase === "uploading"
+-                      ? "서버로 전송하고 있습니다"
+-                      : "방문자 데이터를 추출하고 있습니다"}
++                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>
++                    {phase === "uploading" ? "서버로 전송하고 있습니다" : "방문자 데이터를 추출하고 있습니다"}
+                   </div>
+-                  {phase === "analyzing" && progress > 0 && (
+-                    <div
+-                      style={{
+-                        marginTop: 12,
+-                        fontSize: 13,
+-                        color: "var(--accent)",
+-                        fontWeight: 700,
+-                      }}
+-                    >
+-                      {progress}%
+-                    </div>
+-                  )}
+                 </div>
+               </div>
+             )}
+ 
+-            {phase === "error" && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 14,
+-                  flex: 1,
+-                }}
+-              >
+-                <div
+-                  style={{
+-                    width: 56,
+-                    height: 56,
+-                    borderRadius: "50%",
+-                    background: "var(--bad-soft)",
+-                    display: "grid",
+-                    placeItems: "center",
+-                  }}
+-                >
+-                  <span
+-                    style={{
+-                      color: "oklch(0.45 0.16 25)",
+-                      fontSize: 24,
+-                      fontWeight: 700,
+-                      lineHeight: 1,
+-                    }}
+-                  >
+-                    !
+-                  </span>
++            {phase === "done" && (
++              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, flex: 1 }}>
++                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--good-soft)", display: "grid", placeItems: "center" }}>
++                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
++                    stroke="oklch(0.42 0.12 155)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
++                    <polyline points="20 6 9 17 4 12"/>
++                  </svg>
+                 </div>
+                 <div style={{ textAlign: "center" }}>
+-                  <div
+-                    style={{
+-                      fontSize: 15,
+-                      fontWeight: 600,
+-                      color: "oklch(0.45 0.16 25)",
+-                    }}
+-                  >
+-                    분석 중 오류가 발생했습니다
+-                  </div>
+-                  <div
+-                    style={{
+-                      fontSize: 13,
+-                      color: "var(--muted)",
+-                      marginTop: 6,
+-                    }}
+-                  >
+-                    다른 영상으로 다시 시도해주세요
+-                  </div>
++                  <div style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.42 0.12 155)" }}>분석 완료</div>
++                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>오른쪽에서 결과를 확인하세요</div>
+                 </div>
+-                <button
+-                  className="intro-btn"
+-                  onClick={() => {
+-                    setPhase("idle");
+-                    setProgress(0);
+-                  }}
+-                >
+-                  다시 시도
++                <button className="intro-btn" onClick={() => { setPhase("idle"); setResult(null); }}>
++                  새 영상 업로드
+                 </button>
+               </div>
+             )}
+ 
+-            {phase === "done" && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 14,
+-                  flex: 1,
+-                }}
+-              >
+-                <div
+-                  style={{
+-                    width: 56,
+-                    height: 56,
+-                    borderRadius: "50%",
+-                    background: "var(--good-soft)",
+-                    display: "grid",
+-                    placeItems: "center",
+-                  }}
+-                >
+-                  <svg
+-                    width="26"
+-                    height="26"
+-                    viewBox="0 0 24 24"
+-                    fill="none"
+-                    stroke="oklch(0.42 0.12 155)"
+-                    strokeWidth="2.5"
+-                    strokeLinecap="round"
+-                    strokeLinejoin="round"
+-                  >
+-                    <polyline points="20 6 9 17 4 12" />
+-                  </svg>
++            {phase === "error" && (
++              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, flex: 1 }}>
++                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--bad-soft)", display: "grid", placeItems: "center" }}>
++                  <span style={{ color: "oklch(0.45 0.16 25)", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>!</span>
+                 </div>
+                 <div style={{ textAlign: "center" }}>
+-                  <div
+-                    style={{
+-                      fontSize: 15,
+-                      fontWeight: 600,
+-                      color: "oklch(0.42 0.12 155)",
+-                    }}
+-                  >
+-                    분석 완료
+-                  </div>
+-                  <div
+-                    style={{
+-                      fontSize: 13,
+-                      color: "var(--muted)",
+-                      marginTop: 6,
+-                    }}
+-                  >
+-                    오른쪽에서 결과를 확인하세요
+-                  </div>
++                  <div style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.45 0.16 25)" }}>오류가 발생했습니다</div>
++                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>다른 영상으로 다시 시도해주세요</div>
+                 </div>
+-                <button
+-                  className="intro-btn"
+-                  onClick={() => {
+-                    setPhase("idle");
+-                    setResult(null);
+-                    setProgress(0);
+-                  }}
+-                >
+-                  새 영상 업로드
+-                </button>
++                <button className="intro-btn" onClick={() => setPhase("idle")}>다시 시도</button>
+               </div>
+             )}
+           </div>
+         </div>
+ 
+         {/* ── 우: 분석 결과 ── */}
+-        <div
+-          className="card"
+-          style={{ display: "flex", flexDirection: "column", minHeight: 0 }}
+-        >
++        <div className="card" style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+           <div className="card-h">
+-            <span className="ai-h-badge">
+-              <Ic.Sparkle /> Vision AI 분석 결과
+-            </span>
++            <span className="ai-h-badge"><Ic.Sparkle/> Vision AI 분석 결과</span>
+           </div>
+-          <div
+-            className="card-b"
+-            style={{ padding: 24, flex: 1, overflow: "auto" }}
+-          >
+-            {phase === "idle" && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 12,
+-                  height: "100%",
+-                }}
+-              >
+-                <svg
+-                  width="48"
+-                  height="48"
+-                  viewBox="0 0 24 24"
+-                  fill="none"
+-                  stroke="var(--line-2)"
+-                  strokeWidth="1.4"
+-                  strokeLinecap="round"
+-                  strokeLinejoin="round"
+-                >
+-                  <rect x="2" y="3" width="20" height="14" rx="2" />
+-                  <path d="M8 21h8M12 17v4" />
+-                  <path d="M9 9l3 3 3-3" />
++          <div className="card-b" style={{ padding: 24, flex: 1, overflow: "auto" }}>
++
++            {(phase === "idle" || phase === "error") && (
++              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, height: "100%" }}>
++                <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
++                  stroke="var(--line-2)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
++                  <rect x="2" y="3" width="20" height="14" rx="2"/>
++                  <path d="M8 21h8M12 17v4"/>
++                  <path d="M9 9l3 3 3-3"/>
+                 </svg>
+-                <div
+-                  style={{
+-                    fontSize: 13,
+-                    color: "var(--muted-2)",
+-                    textAlign: "center",
+-                    lineHeight: 1.6,
+-                  }}
+-                >
+-                  영상을 업로드하면
+-                  <br />
+-                  분석 결과가 여기에 표시됩니다
++                <div style={{ fontSize: 13, color: "var(--muted-2)", textAlign: "center", lineHeight: 1.6 }}>
++                  영상을 업로드하면<br/>분석 결과가 여기에 표시됩니다
+                 </div>
+               </div>
+             )}
+ 
+             {(phase === "uploading" || phase === "analyzing") && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  flexDirection: "column",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  gap: 14,
+-                  height: "100%",
+-                }}
+-              >
++              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, height: "100%" }}>
+                 <div style={{ display: "flex", gap: 7 }}>
+                   {[0, 1, 2].map((i) => (
+-                    <div
+-                      key={i}
+-                      style={{
+-                        width: 9,
+-                        height: 9,
+-                        borderRadius: "50%",
+-                        background: "var(--accent)",
+-                        animation: `intro-bounce .7s ease-in-out ${i * 0.14}s infinite alternate`,
+-                      }}
+-                    />
++                    <div key={i} style={{
++                      width: 9, height: 9, borderRadius: "50%", background: "var(--accent)",
++                      animation: `intro-bounce .7s ease-in-out ${i * 0.14}s infinite alternate`,
++                    }}/>
+                   ))}
+                 </div>
+-                <div style={{ fontSize: 13, color: "var(--muted)" }}>
+-                  분석 결과를 기다리는 중...
+-                </div>
++                <div style={{ fontSize: 13, color: "var(--muted)" }}>분석 결과를 기다리는 중...</div>
+               </div>
+             )}
+ 
+             {phase === "done" && result && (
+-              <div
+-                style={{ display: "flex", flexDirection: "column", gap: 22 }}
+-              >
+-                {/* 요약 KPI 3개 */}
+-                <div
+-                  style={{
+-                    display: "grid",
+-                    gridTemplateColumns: "repeat(3, 1fr)",
+-                    gap: 12,
+-                  }}
+-                >
+-                  <div
+-                    style={{
+-                      background: "var(--accent-soft)",
+-                      borderRadius: 12,
+-                      padding: "14px 16px",
+-                    }}
+-                  >
+-                    <div
+-                      style={{
+-                        fontSize: 11,
+-                        color: "var(--accent-ink)",
+-                        fontWeight: 500,
+-                      }}
+-                    >
+-                      총 방문자
+-                    </div>
+-                    <div
+-                      style={{
+-                        fontSize: 26,
+-                        fontWeight: 700,
+-                        letterSpacing: "-0.02em",
+-                        marginTop: 5,
+-                        color: "var(--accent-ink)",
+-                        display: "flex",
+-                        alignItems: "baseline",
+-                        gap: 3,
+-                      }}
+-                    >
+-                      {result.summary.totalVisitors}
++              <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
++
++                {/* KPI 3개 */}
++                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
++                  <div style={{ background: "var(--accent-soft)", borderRadius: 12, padding: "14px 16px" }}>
++                    <div style={{ fontSize: 11, color: "var(--accent-ink)", fontWeight: 500 }}>총 방문자</div>
++                    <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 5, color: "var(--accent-ink)", display: "flex", alignItems: "baseline", gap: 3 }}>
++                      {result.summary?.totalVisitors ?? 0}
+                       <span style={{ fontSize: 13, fontWeight: 500 }}>명</span>
+                     </div>
+                   </div>
+-                  <div
+-                    style={{
+-                      background: congestion.bg,
+-                      borderRadius: 12,
+-                      padding: "14px 16px",
+-                    }}
+-                  >
+-                    <div
+-                      style={{
+-                        fontSize: 11,
+-                        color: congestion.color,
+-                        fontWeight: 500,
+-                      }}
+-                    >
+-                      최대 혼잡도
+-                    </div>
+-                    <div
+-                      style={{
+-                        fontSize: 26,
+-                        fontWeight: 700,
+-                        letterSpacing: "-0.02em",
+-                        marginTop: 5,
+-                        color: congestion.color,
+-                      }}
+-                    >
++                  <div style={{ background: congestion.bg, borderRadius: 12, padding: "14px 16px" }}>
++                    <div style={{ fontSize: 11, color: congestion.color, fontWeight: 500 }}>최대 혼잡도</div>
++                    <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 5, color: congestion.color }}>
+                       {congestion.text}
+                     </div>
+                   </div>
+-                  <div
+-                    style={{
+-                      background: "#F7F9FC",
+-                      borderRadius: 12,
+-                      padding: "14px 16px",
+-                    }}
+-                  >
+-                    <div
+-                      style={{
+-                        fontSize: 11,
+-                        color: "var(--muted)",
+-                        fontWeight: 500,
+-                      }}
+-                    >
+-                      평균 체류
+-                    </div>
+-                    <div
+-                      style={{
+-                        fontSize: 20,
+-                        fontWeight: 700,
+-                        letterSpacing: "-0.015em",
+-                        marginTop: 5,
+-                      }}
+-                    >
+-                      {formatDwell(result.summary.avgDwellTimeSeconds)}
++                  <div style={{ background: "#F7F9FC", borderRadius: 12, padding: "14px 16px" }}>
++                    <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500 }}>평균 체류</div>
++                    <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.015em", marginTop: 5 }}>
++                      {formatDwell(result.summary?.avgDwellTimeSeconds)}
+                     </div>
+                   </div>
+                 </div>
+ 
+                 {/* 성별 분포 */}
+-                {genderStats && (
++                {genderTotal > 0 && (
+                   <div>
+-                    <div
+-                      style={{
+-                        fontSize: 13,
+-                        fontWeight: 600,
+-                        marginBottom: 12,
+-                        color: "var(--ink-2)",
+-                      }}
+-                    >
+-                      성별 분포
+-                    </div>
++                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--ink-2)" }}>성별 분포</div>
+                     {[
+-                      {
+-                        label: "여성",
+-                        pct: genderStats.female,
+-                        color: "oklch(0.68 0.14 350)",
+-                      },
+-                      {
+-                        label: "남성",
+-                        pct: genderStats.male,
+-                        color: "var(--accent)",
+-                      },
++                      { label: "여성", pct: femalePct, color: "oklch(0.68 0.14 350)" },
++                      { label: "남성", pct: malePct, color: "var(--accent)" },
+                     ].map((g) => (
+-                      <div
+-                        key={g.label}
+-                        style={{
+-                          display: "grid",
+-                          gridTemplateColumns: "32px 1fr 40px",
+-                          gap: 10,
+-                          alignItems: "center",
+-                          fontSize: 13,
+-                          marginBottom: 10,
+-                        }}
+-                      >
++                      <div key={g.label} style={{ display: "grid", gridTemplateColumns: "32px 1fr 40px", gap: 10, alignItems: "center", fontSize: 13, marginBottom: 10 }}>
+                         <div style={{ color: "var(--muted)" }}>{g.label}</div>
+-                        <div
+-                          style={{
+-                            height: 8,
+-                            background: "#F1F3F6",
+-                            borderRadius: 99,
+-                            overflow: "hidden",
+-                          }}
+-                        >
+-                          <div
+-                            style={{
+-                              height: "100%",
+-                              width: `${g.pct}%`,
+-                              background: g.color,
+-                              borderRadius: 99,
+-                              transition: "width .6s ease",
+-                            }}
+-                          />
+-                        </div>
+-                        <div
+-                          className="mono"
+-                          style={{ fontWeight: 600, textAlign: "right" }}
+-                        >
+-                          {g.pct}%
+-                        </div>
+-                      </div>
+-                    ))}
+-                  </div>
+-                )}
+-
+-                {/* 연령대 분포 */}
+-                {ageStats && (
+-                  <div>
+-                    <div
+-                      style={{
+-                        fontSize: 13,
+-                        fontWeight: 600,
+-                        marginBottom: 12,
+-                        color: "var(--ink-2)",
+-                      }}
+-                    >
+-                      연령대 분포
+-                    </div>
+-                    {ageStats.map((a) => (
+-                      <div
+-                        key={a.label}
+-                        style={{
+-                          display: "grid",
+-                          gridTemplateColumns: "36px 1fr 40px",
+-                          gap: 10,
+-                          alignItems: "center",
+-                          fontSize: 13,
+-                          marginBottom: 10,
+-                        }}
+-                      >
+-                        <div style={{ color: "var(--muted)" }}>{a.label}</div>
+-                        <div
+-                          style={{
+-                            height: 8,
+-                            background: "#F1F3F6",
+-                            borderRadius: 99,
+-                            overflow: "hidden",
+-                          }}
+-                        >
+-                          <div
+-                            style={{
+-                              height: "100%",
+-                              width: `${a.width}%`,
+-                              background:
+-                                "linear-gradient(90deg, var(--accent), oklch(0.7 0.12 240))",
+-                              borderRadius: 99,
+-                              transition: "width .6s ease",
+-                            }}
+-                          />
+-                        </div>
+-                        <div
+-                          className="mono"
+-                          style={{ fontWeight: 600, textAlign: "right" }}
+-                        >
+-                          {a.pct}%
++                        <div style={{ height: 8, background: "#F1F3F6", borderRadius: 99, overflow: "hidden" }}>
++                          <div style={{ height: "100%", width: `${g.pct}%`, background: g.color, borderRadius: 99, transition: "width .6s ease" }}/>
+                         </div>
++                        <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>{g.pct}%</div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+ 
+                 <div className="priv">
+-                  <Ic.Shield color="#9AA3AF" />
+-                  Vision AI 익명 추정 통계입니다. 개인 식별 정보는 저장되지
+-                  않습니다.
+-                </div>
+-              </div>
+-            )}
+-
+-            {phase === "error" && (
+-              <div
+-                style={{
+-                  display: "flex",
+-                  alignItems: "center",
+-                  justifyContent: "center",
+-                  height: "100%",
+-                }}
+-              >
+-                <div style={{ fontSize: 13, color: "var(--muted-2)" }}>
+-                  분석 결과를 불러오지 못했습니다.
++                  <Ic.Shield color="#9AA3AF"/>
++                  Vision AI 익명 추정 통계입니다. 개인 식별 정보는 저장되지 않습니다.
+                 </div>
+               </div>
+             )}
+@@ -828,28 +287,13 @@ export default function IntroPage() {
+         </div>
+       </div>
+ 
+-      {/* 건너뛰기 — 그리드 하단 오른쪽 */}
+-      <div
+-        style={{
+-          display: "flex",
+-          justifyContent: "flex-end",
+-          flexShrink: 0,
+-          marginTop: 14,
+-        }}
+-      >
++      {/* 건너뛰기 */}
++      <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0, marginTop: 14 }}>
+         <button className="intro-skip" onClick={() => navigate("/dashboard")}>
+           대시보드로 건너뛰기
+-          <svg
+-            width="13"
+-            height="13"
+-            viewBox="0 0 24 24"
+-            fill="none"
+-            stroke="currentColor"
+-            strokeWidth="2"
+-            strokeLinecap="round"
+-            strokeLinejoin="round"
+-          >
+-            <path d="M5 12h14M12 5l7 7-7 7" />
++          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
++            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
++            <path d="M5 12h14M12 5l7 7-7 7"/>
+           </svg>
+         </button>
+       </div>
+diff --git a/src/pages/ReportsPage.jsx b/src/pages/ReportsPage.jsx
+index abb7693..bf156e6 100644
+--- a/src/pages/ReportsPage.jsx
++++ b/src/pages/ReportsPage.jsx
+@@ -824,7 +824,7 @@ export default function ReportsPage() {
+           >
+             <Ic.Shield color="#9AA3AF" />
+             모든 리포트 데이터는 Vision AI 익명 집계 결과입니다. 얼굴 인식, 개인
+-            식별, 영상 저장은 수행하지 않습니다.
++            식별은 수행하지 않습니다.
+           </div>
+         </div>
+       </div>

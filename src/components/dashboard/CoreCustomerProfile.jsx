@@ -1,4 +1,5 @@
 import { Ic } from "../ui/Icons";
+import InfoTooltip from "../ui/InfoTooltip";
 
 function genderLabel(g) {
   if (g === "MAN" || g === "MALE") return "남성";
@@ -23,6 +24,7 @@ export default function CoreCustomerProfile({ core }) {
         <span className="sub">· core-customers API 결과</span>
         <div className="right">
           <span className="chip" style={{ background: "var(--accent-soft)", color: "var(--accent-ink)" }}>대표 그룹</span>
+          <InfoTooltip text={'오늘 매장을 가장 많이 방문한 핵심 고객 그룹이에요.\n\nVision AI가 성별과 연령대를 익명으로 추정해서 대표 그룹을 계산해요. 어떤 손님이 주로 오는지 파악해서 운영이나 마케팅에 참고할 수 있어요.'} />
         </div>
       </div>
 

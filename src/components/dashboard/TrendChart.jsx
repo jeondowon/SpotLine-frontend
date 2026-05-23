@@ -5,7 +5,7 @@ const LINES = [
   { label: '60일선', color: 'oklch(0.65 0.10 65)',  width: 1.6 },
 ]
 
-export default function TrendChart({ data }) {
+export default function TrendChart({ data, selectedDay }) {
   if (!data?.date?.length) {
     return (
       <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-2)', fontSize: 13 }}>
@@ -14,12 +14,31 @@ export default function TrendChart({ data }) {
     )
   }
 
+  // Find index of the selected date to start drawing from
+  let startIndex = 0;
+  if (selectedDay) {
+    const idx = data.date.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10));
+    if (idx !== -1) {
+      startIndex = idx;
+      
+      // UX Safety: If the remaining points are too few (e.g. less than 5), 
+      // show at least 5 days of history so the graph remains visually readable and useful.
+      const totalPoints = data.date.length;
+      if (totalPoints - startIndex < 5 && totalPoints >= 5) {
+        startIndex = totalPoints - 5;
+      }
+    }
+  }
+
+  const slicedDate = data.date.slice(startIndex);
+  const slicedData = (data.data ?? []).map(line => line.slice(startIndex));
+
   const W = 760, H = 220, PAD_L = 36, PAD_R = 14, PAD_T = 12, PAD_B = 24
   const innerW = W - PAD_L - PAD_R
   const innerH = H - PAD_T - PAD_B
-  const n = data.date.length
+  const n = slicedDate.length
 
-  const allVals = (data.data ?? []).flat().filter(v => v != null && !isNaN(v))
+  const allVals = slicedData.flat().filter(v => v != null && !isNaN(v))
   const minY = allVals.length ? Math.max(0, Math.min(...allVals) * 0.9) : 0
   const maxY = allVals.length ? Math.max(...allVals) * 1.1 : 100
   const range = maxY - minY || 1
@@ -35,7 +54,7 @@ export default function TrendChart({ data }) {
   }
 
   const step = Math.max(1, Math.floor(n / 6))
-  const dateLabels = data.date
+  const dateLabels = slicedDate
     .map((d, i) => ({ label: d.slice(5, 10), i }))
     .filter(({ i }) => i % step === 0 || i === n - 1)
 
@@ -58,7 +77,7 @@ export default function TrendChart({ data }) {
           <text key={i} x={xi(i)} y={H - 6} fontSize="10" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{label}</text>
         ))}
 
-        {(data.data ?? []).slice(0, LINES.length).map((vals, li) => {
+        {slicedData.slice(0, LINES.length).map((vals, li) => {
           const d = pathFor(vals)
           return d ? (
             <path key={li} d={d} fill="none" stroke={LINES[li].color} strokeWidth={LINES[li].width} strokeLinecap="round" strokeLinejoin="round" />
@@ -67,12 +86,12 @@ export default function TrendChart({ data }) {
       </svg>
 
       <div className="legend">
-        {LINES.slice(0, (data.data ?? []).length).map(l => (
+        {LINES.slice(0, slicedData.length).map(l => (
           <div key={l.label}><span className="sw" style={{ background: l.color }} />{l.label}</div>
         ))}
         {(() => {
-          const ma5 = data.data?.[0] ?? []
-          const ma20 = data.data?.[2] ?? []
+          const ma5 = slicedData?.[0] ?? []
+          const ma20 = slicedData?.[2] ?? []
           const pairs = []
           for (let i = ma5.length - 1; i >= 0 && pairs.length < 2; i--) {
             if (ma5[i] != null && ma20[i] != null) pairs.unshift([ma5[i], ma20[i]])

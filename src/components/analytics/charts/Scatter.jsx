@@ -32,7 +32,7 @@ export default function Scatter() {
       {SCATTER_PTS.map((p, i) => (
         <circle key={i} cx={x(p[0])} cy={y(p[1])} r="5" fill={colors[p[2]]} opacity="0.85" stroke="#fff" strokeWidth="1.5"/>
       ))}
-      <text x={W - PAD_R - 2} y={y(ly2) - 6} fontSize="10.5" textAnchor="end" fill="var(--accent-ink)" fontWeight="600" fontFamily="JetBrains Mono">상관계수 r = 0.78</text>
+      <text x={W - PAD_R - 2} y={y(ly2) - 6} fontSize="10.5" textAnchor="end" fill="var(--accent-ink)" fontWeight="600" fontFamily="JetBrains Mono">상관계수 r = 0.8</text>
     </svg>
   )
 }

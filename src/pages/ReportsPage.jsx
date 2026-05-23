@@ -824,7 +824,7 @@ export default function ReportsPage() {
           >
             <Ic.Shield color="#9AA3AF" />
             모든 리포트 데이터는 Vision AI 익명 집계 결과입니다. 얼굴 인식, 개인
-            식별, 영상 저장은 수행하지 않습니다.
+            식별은 수행하지 않습니다.
           </div>
         </div>
       </div>

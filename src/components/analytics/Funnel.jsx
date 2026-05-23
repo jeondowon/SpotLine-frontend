@@ -33,7 +33,7 @@ export default function Funnel() {
                     ? "linear-gradient(90deg, oklch(0.7 0.13 25), oklch(0.62 0.18 25))"
                     : `linear-gradient(90deg, ${colors[i]}, var(--accent))`,
                 }}>
-                  {pct >= 18 && <span>{pct.toFixed(0)}%</span>}
+                  {pct >= 18 && <span>{pct.toFixed(1)}%</span>}
                 </div>
               </div>
             </div>

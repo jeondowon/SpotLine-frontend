@@ -1,3 +1,7 @@
+import InfoTooltip from '../ui/InfoTooltip';
+
+const INFO_TEXT = '비가 와서 손님이 적었다면, 날씨 탓일까요? 매장 탓일까요?\n\n날씨와 요일 효과를 제거하고 순수하게 매장 성과만 평가해줘요. 오늘 조건에서 기대되는 방문자 수 대비 실제로 얼마나 잘 됐는지 확인할 수 있어요.';
+
 const RESULT_META = {
   GOOD: {
     text: "날씨 감안하면 선방",
@@ -54,7 +58,7 @@ function BarRow({ label, value, max, color }) {
         />
       </div>
       <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>
-        {value}
+        {typeof value === "number" ? value.toFixed(1) : value}
       </div>
     </div>
   );
@@ -65,8 +69,9 @@ export default function WeatherPerformance({ weather }) {
     return (
       <div className="card">
         <div className="card-h">
-          <h3>날씨 보정 성과 상세</h3>
+          <h3>날씨 대비 실제 성과</h3>
           <span className="sub">· 날씨·요일 효과 제거 후 실제 성과</span>
+          <div className="right"><InfoTooltip text={INFO_TEXT} /></div>
         </div>
         <div className="card-b">
           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}>
@@ -85,7 +90,7 @@ export default function WeatherPerformance({ weather }) {
   return (
     <div className="card">
       <div className="card-h">
-        <h3>날씨 보정 성과 상세</h3>
+        <h3>날씨 대비 실제 성과</h3>
         <span className="sub">· 날씨·요일 효과 제거 후 실제 성과</span>
         <div className="right">
           <span
@@ -100,6 +105,7 @@ export default function WeatherPerformance({ weather }) {
           >
             {m.text}
           </span>
+          <InfoTooltip text={INFO_TEXT} />
         </div>
       </div>
 
@@ -117,8 +123,8 @@ export default function WeatherPerformance({ weather }) {
           }}
         >
           {[
-            { label: "어제 실제 방문", value: realValue, unit: "명", color: "var(--ink)" },
-            { label: "날씨·요일 기댓값", value: expectValue, unit: "명", color: "var(--muted)" },
+            { label: "어제 실제 방문", value: typeof realValue === "number" ? realValue.toFixed(1) : realValue, unit: "명", color: "var(--ink)" },
+            { label: "날씨·요일 기댓값", value: typeof expectValue === "number" ? expectValue.toFixed(1) : expectValue, unit: "명", color: "var(--muted)" },
             { label: "보정 성과", value: `${ratio}%`, unit: "", color: m.ink },
           ].map((s, i) => (
             <div
