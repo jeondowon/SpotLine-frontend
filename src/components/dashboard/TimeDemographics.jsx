@@ -70,7 +70,6 @@ export default function TimeDemographics({ persons }) {
     <div className="card">
       <div className="card-h">
         <h3>시간대별 인구통계 변화</h3>
-        <span className="sub">· 오전 / 점심 / 오후 / 저녁</span>
         <div className="right"><InfoTooltip text={'오전·점심·오후·저녁 시간대에 방문 고객의 연령·성별 구성이 어떻게 달라지는지 보여줘요.\n\n시간대마다 다른 고객층이 오는 패턴을 파악해서, 시간대별 맞춤 운영이나 프로모션을 기획하는 데 도움이 돼요.'} /></div>
       </div>
       <div className="card-b">

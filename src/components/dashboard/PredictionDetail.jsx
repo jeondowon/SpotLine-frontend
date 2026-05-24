@@ -70,9 +70,7 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
     <div className="card">
       <div className="card-h">
         <h3>단기 방문 예측 상세</h3>
-        <span className="sub">· 내일 · 다음 주 7일</span>
         <div className="right">
-          <span className="chip">날씨 · 트렌드 반영</span>
           <InfoTooltip text={'내일과 다음 주 7일의 방문자 수를 예측해요.\n\n최근 방문 트렌드와 날씨 예보, 요일 패턴을 모두 반영해서 계산해요. 인력 배치나 재고 준비에 활용해보세요.'} />
         </div>
       </div>

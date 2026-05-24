@@ -374,7 +374,6 @@ export default function DashboardPage() {
             <div className="card">
               <div className="card-h">
                 <h3>오늘 연령대 분포</h3>
-                <span className="sub">· 시간대별 인구통계</span>
                 <div className="right"><InfoTooltip text={'오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요.'} /></div>
               </div>
               <div className="card-b">

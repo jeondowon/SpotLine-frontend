@@ -138,7 +138,6 @@ export default function WeekdayAnomaly({ weekday }) {
       <div className="card">
         <div className="card-h">
           <h3>오늘의 방문자 수</h3>
-          <span className="sub">· {dowLabel}요일 기준 통계</span>
           <div className="right"><InfoTooltip text={INFO_TEXT} /></div>
         </div>
         <div className="card-b">
@@ -160,20 +159,7 @@ export default function WeekdayAnomaly({ weekday }) {
     <div className="card">
       <div className="card-h">
         <h3>오늘의 방문자 수</h3>
-        <span className="sub">· {dowLabel}요일 기준 통계 (±2σ 룰)</span>
         <div className="right">
-          <span
-            style={{
-              fontSize: 11,
-              padding: "3px 9px",
-              borderRadius: 999,
-              background: m.bg,
-              color: m.ink,
-              fontWeight: 600,
-            }}
-          >
-            {m.label}
-          </span>
           <InfoTooltip text={INFO_TEXT} />
         </div>
       </div>

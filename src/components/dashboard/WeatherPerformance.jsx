@@ -71,7 +71,6 @@ export default function WeatherPerformance({ weather }) {
       <div className="card">
         <div className="card-h">
           <h3>날씨 대비 실제 성과</h3>
-          <span className="sub">· 날씨·요일 효과 제거 후 실제 성과</span>
           <div className="right"><InfoTooltip text={INFO_TEXT} /></div>
         </div>
         <div className="card-b">
@@ -92,20 +91,7 @@ export default function WeatherPerformance({ weather }) {
     <div className="card">
       <div className="card-h">
         <h3>날씨 대비 실제 성과</h3>
-        <span className="sub">· 날씨·요일 효과 제거 후 실제 성과</span>
         <div className="right">
-          <span
-            style={{
-              fontSize: 11,
-              padding: "3px 9px",
-              borderRadius: 999,
-              background: m.bg,
-              color: m.ink,
-              fontWeight: 600,
-            }}
-          >
-            {m.text}
-          </span>
           <InfoTooltip text={INFO_TEXT} />
         </div>
       </div>
