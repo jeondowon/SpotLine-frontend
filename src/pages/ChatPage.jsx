@@ -3,7 +3,7 @@ import Sidebar from "../components/layout/Sidebar";
 import { Ic } from "../components/ui/Icons";
 import "../styles/chat.css";
 
-const OLLAMA_URL = "https://ollama.seohamin.com/api/chat";
+const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL ?? "/ollama/api/chat";
 const MODEL = "gemma4:e4b-it-q4_K_M";
 
 const SYSTEM_PROMPT = `당신은 SpotLine의 매장 분석 전문 컨설턴트입니다. 절대로 자신을 AI나 인공지능이라고 밝히지 마세요. 당신은 10년 이상 리테일 데이터 분석 경력을 가진 실무 전문가처럼 대화하세요.
@@ -103,7 +103,7 @@ export default function ChatPage() {
     let cancelled = false;
     async function check() {
       try {
-        const res = await fetch(OLLAMA_URL.replace("/api/chat", "/"), {
+        const res = await fetch(OLLAMA_URL.replace("/api/chat", "/api/tags"), {
           method: "GET",
           signal: AbortSignal.timeout(5000),
         });

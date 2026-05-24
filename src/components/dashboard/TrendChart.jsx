@@ -62,7 +62,10 @@ export default function TrendChart({ data, selectedDay }) {
     .map((d, i) => ({ label: d.slice(5, 10), i }))
     .filter(({ i }) => i % step === 0 || i === n - 1)
 
-  const gridVals = [0, 0.25, 0.5, 0.75, 1].map(r => Math.round(minY + r * range))
+  const gridStep = 5
+  const gridStart = Math.ceil(minY / gridStep) * gridStep
+  const gridVals = []
+  for (let v = gridStart; v <= maxY; v += gridStep) gridVals.push(v)
 
   return (
     <div className="chart-wrap">

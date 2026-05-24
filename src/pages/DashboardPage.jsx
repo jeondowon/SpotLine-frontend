@@ -297,7 +297,7 @@ export default function DashboardPage() {
                     : "오늘 매장 인사이트를 확인하세요."}
                 </h1>
               </div>
-              <DatePicker day={day} setDay={setDay} />
+              <DatePicker day={day} setDay={setDay} dataDates={visits?.date ?? []} />
             </div>
           </div>
 
