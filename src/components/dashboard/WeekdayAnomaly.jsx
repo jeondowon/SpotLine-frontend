@@ -167,7 +167,7 @@ export default function WeekdayAnomaly({ weekday }) {
   const maxVal = Math.max(realValue, expectValue);
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
       <div className="card-h">
         <h3>오늘의 방문자 수</h3>
         <div className="right">
@@ -175,7 +175,7 @@ export default function WeekdayAnomaly({ weekday }) {
         </div>
       </div>
 
-      <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
         {/* 3개 핵심 수치 */}
         <div
           style={{
@@ -248,6 +248,7 @@ export default function WeekdayAnomaly({ weekday }) {
         <div
           style={{
             ...INSIGHT_BOX_STYLE,
+            marginTop: "auto",
             background: m.bg,
             color: m.ink,
           }}

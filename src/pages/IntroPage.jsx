@@ -291,7 +291,7 @@ export default function IntroPage() {
       {/* 건너뛰기 */}
       <div style={{ display: "flex", justifyContent: "flex-end", flexShrink: 0, marginTop: 14 }}>
         <button className="intro-skip" onClick={() => navigate("/dashboard")}>
-          대시보드로 건너뛰기
+          대시보드로 이동
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7"/>

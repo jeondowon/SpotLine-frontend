@@ -102,7 +102,7 @@ export default function WeatherPerformance({ weather }) {
   const maxVal = Math.max(realValue, expectValue);
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
       <div className="card-h">
         <h3>날씨 대비 실제 성과</h3>
         <div className="right">
@@ -110,7 +110,7 @@ export default function WeatherPerformance({ weather }) {
         </div>
       </div>
 
-      <div className="card-b">
+      <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
         {/* 3개 핵심 수치 */}
         <div
           style={{
@@ -120,7 +120,6 @@ export default function WeatherPerformance({ weather }) {
             border: "1px solid var(--line)",
             borderRadius: 11,
             overflow: "hidden",
-            marginBottom: 20,
           }}
         >
           {[

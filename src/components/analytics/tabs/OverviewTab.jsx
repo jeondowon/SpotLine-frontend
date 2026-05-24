@@ -73,7 +73,7 @@ export default function OverviewTab({ data = {}, day }) {
             icon={<Ic.Clock/>}
             iconBg="oklch(0.95 0.04 155)" iconFg="oklch(0.42 0.12 155)"
             value="—" hint="집계 API 미제공"/>
-          <KPI label="날씨 보정 성과"
+          <KPI label="날씨 대비 실제 성과"
             icon={<Ic.Sun/>}
             iconBg={weatherResult ? resultBg(weatherResult) : 'oklch(0.95 0.05 80)'}
             iconFg={weatherResult ? resultFg(weatherResult) : 'oklch(0.55 0.14 65)'}

@@ -41,7 +41,6 @@ const TWEAK_DEFAULTS = {
   showPrivacyBadge: true,
 };
 
-const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 const AGE_KEYS = [
   { key: "age10s", label: "10대" },
@@ -96,7 +95,7 @@ export default function DashboardPage() {
   const [marketingLoading, setMarketingLoading] = useState(false);
   const getLocalToday = () => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   };
 
   const [day, setDay] = useState(getLocalToday);
@@ -143,8 +142,6 @@ export default function DashboardPage() {
     sixtyDaysAgo.setHours(0, 0, 0, 0);
     const videoId = localStorage.getItem("last_video_id");
 
-    setState((s) => ({ ...s, loading: true }));
-
     Promise.allSettled([
       fetchCoreCustomers(startAt, endAt),
       fetchHourlyPopulation(startAt, endAt),
@@ -156,7 +153,17 @@ export default function DashboardPage() {
       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
       fetchDailyVisits(todayDay),
     ]).then(
-      ([core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits]) => {
+      ([
+        core,
+        hourly,
+        weather,
+        weekday,
+        visits,
+        tomorrow,
+        nextWeek,
+        raw,
+        dailyVisits,
+      ]) => {
         setState({
           loading: false,
           data: {
@@ -168,12 +175,13 @@ export default function DashboardPage() {
             tomorrow: tomorrow.status === "fulfilled" ? tomorrow.value : null,
             nextWeek: nextWeek.status === "fulfilled" ? nextWeek.value : null,
             raw: raw.status === "fulfilled" ? raw.value : null,
-            dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : null,
+            dailyVisits:
+              dailyVisits.status === "fulfilled" ? dailyVisits.value : null,
           },
         });
       },
     );
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 2) 날짜 변경 시, 오직 4개 핵심 KPI 관련 API만 해당 날짜 하루 치 데이터로 교체 (나머지는 유지)
   useEffect(() => {
@@ -186,29 +194,46 @@ export default function DashboardPage() {
     const endAt = `${day}T23:59:59`;
     const seedVideoId = getSeedVideoId(day);
     const videoId = seedVideoId || localStorage.getItem("last_video_id") || 1;
+    const selectedDayOfWeek = (new Date(`${day}T12:00:00`).getDay() + 6) % 7;
 
     Promise.allSettled([
       fetchCoreCustomers(startAt, endAt),
       fetchWeatherImpact(`${day}T00:00:00`),
+      fetchWeekdayPatterns(`${day}T00:00:00`, selectedDayOfWeek),
       videoId ? fetchRawAnalytics(videoId) : Promise.resolve(null),
       fetchDailyVisits(day),
-    ]).then(([core, weather, raw, dailyVisits]) => {
+    ]).then(([core, weather, weekday, raw, dailyVisits]) => {
       setState((s) => ({
         ...s,
         data: {
           ...s.data,
           core: core.status === "fulfilled" ? core.value : s.data.core,
-          weather: weather.status === "fulfilled" ? weather.value : s.data.weather,
+          weather:
+            weather.status === "fulfilled" ? weather.value : s.data.weather,
+          weekday:
+            weekday.status === "fulfilled" ? weekday.value : s.data.weekday,
           raw: raw.status === "fulfilled" ? raw.value : s.data.raw,
-          dailyVisits: dailyVisits.status === "fulfilled" ? dailyVisits.value : s.data.dailyVisits,
+          dailyVisits:
+            dailyVisits.status === "fulfilled"
+              ? dailyVisits.value
+              : s.data.dailyVisits,
         },
       }));
     });
-  }, [day]);
+  }, [day]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, loading } = state;
-  const { core, hourly, weather, weekday, visits, tomorrow, nextWeek, raw, dailyVisits } =
-    data;
+  const {
+    core,
+    hourly,
+    weather,
+    weekday,
+    visits,
+    tomorrow,
+    nextWeek,
+    raw,
+    dailyVisits,
+  } = data;
 
   const [briefing, setBriefing] = useState(null);
   const [marketing, setMarketing] = useState(null);
@@ -243,7 +268,7 @@ export default function DashboardPage() {
     if (!core) return "—";
     const age = ageLabel(core.age);
     const gender = genderLabel(core.gender);
-    const parts = [age, gender].filter(v => v !== "—");
+    const parts = [age, gender].filter((v) => v !== "—");
     return parts.length > 0 ? parts.join(" ") : "—";
   })();
 
@@ -264,17 +289,13 @@ export default function DashboardPage() {
     const fPct = Number(((f / persons.length) * 100).toFixed(1));
     return [
       { label: "여성", pct: fPct, color: "oklch(0.7 0.13 0)" },
-      { label: "남성", pct: Number((100 - fPct).toFixed(1)), color: "oklch(0.62 0.13 250)" },
+      {
+        label: "남성",
+        pct: Number((100 - fPct).toFixed(1)),
+        color: "oklch(0.62 0.13 250)",
+      },
     ];
   })();
-
-  const nextWeekArr = (nextWeek?.result ?? []).map((v) =>
-    typeof v === "object" ? (v?.expectedVisits ?? 0) : v,
-  );
-  const maxNextWeek = Math.max(...nextWeekArr, 1);
-
-  const visitsTrend = visits?.data?.[0];
-  const visitCount = visitsTrend?.length > 0 ? Math.round(visitsTrend[visitsTrend.length - 1]) : null;
 
   return (
     <div className="app">
@@ -297,7 +318,11 @@ export default function DashboardPage() {
                     : "오늘 매장 인사이트를 확인하세요."}
                 </h1>
               </div>
-              <DatePicker day={day} setDay={setDay} dataDates={visits?.date ?? []} />
+              <DatePicker
+                day={day}
+                setDay={setDay}
+                dataDates={visits?.date ?? []}
+              />
             </div>
           </div>
 
@@ -310,11 +335,11 @@ export default function DashboardPage() {
               iconFg="oklch(0.48 0.16 250)"
               value={
                 dailyVisits?.totalVisits != null
-                  ? (typeof dailyVisits.totalVisits === "number"
-                      ? (Number.isInteger(dailyVisits.totalVisits)
-                          ? dailyVisits.totalVisits.toLocaleString()
-                          : ceil1(dailyVisits.totalVisits))
-                      : dailyVisits.totalVisits)
+                  ? typeof dailyVisits.totalVisits === "number"
+                    ? Number.isInteger(dailyVisits.totalVisits)
+                      ? dailyVisits.totalVisits.toLocaleString()
+                      : ceil1(dailyVisits.totalVisits)
+                    : dailyVisits.totalVisits
                   : "—"
               }
               unit={dailyVisits?.totalVisits != null ? "명" : ""}
@@ -337,7 +362,7 @@ export default function DashboardPage() {
               hint="분석된 영상 기준"
             />
             <KPI
-              label="날씨 보정 성과"
+              label="날씨 대비 실제 성과"
               icon={<Ic.Cloud />}
               iconBg={weatherMeta.iconBg}
               iconFg={weatherMeta.iconFg}
@@ -348,7 +373,7 @@ export default function DashboardPage() {
               }
               hint={
                 weather
-                  ? `${weatherMeta.text} · 기대 ${weather.expectValue != null ? ceil1(weather.expectValue) : '—'}명 대비`
+                  ? `${weatherMeta.text} · 기대 ${weather.expectValue != null ? ceil1(weather.expectValue) : "—"}명 대비`
                   : "날씨 영향 보정 후"
               }
             />
@@ -361,7 +386,11 @@ export default function DashboardPage() {
               <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
               <div className="right">
                 <span className="chip dot">날씨 보정값</span>
-                <InfoTooltip text={'최근 60일간 방문자 수의 진짜 흐름을 보여줘요.\n\n하루하루 들쭉날쭉한 노이즈를 줄이고, 5·10·20·60일 이동평균선으로 실제 트렌드를 읽을 수 있어요. 파란 점선은 날씨 영향을 보정한 방문자 수예요.'} />
+                <InfoTooltip
+                  text={
+                    "최근 60일간 방문자 수의 진짜 흐름을 보여줘요.\n\n하루하루 들쭉날쭉한 노이즈를 줄이고, 5·10·20·60일 이동평균선으로 실제 트렌드를 읽을 수 있어요. 파란 점선은 날씨 영향을 보정한 방문자 수예요."
+                  }
+                />
               </div>
             </div>
             <div className="card-b" style={{ padding: "8px 12px 14px" }}>
@@ -374,7 +403,13 @@ export default function DashboardPage() {
             <div className="card">
               <div className="card-h">
                 <h3>오늘 연령대 분포</h3>
-                <div className="right"><InfoTooltip text={'오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요.'} /></div>
+                <div className="right">
+                  <InfoTooltip
+                    text={
+                      "오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요. 주요 고객층이 어떤 연령대인지 파악하는 데 활용할 수 있어요."
+                    }
+                  />
+                </div>
               </div>
               <div className="card-b">
                 <div className="ages">
@@ -395,7 +430,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <PredictionDetail tomorrow={tomorrow} nextWeek={nextWeek} compact={true} />
+            <PredictionDetail
+              tomorrow={tomorrow}
+              nextWeek={nextWeek}
+              compact={true}
+            />
 
             <CoreCustomerProfile core={core} />
           </div>
@@ -416,7 +455,11 @@ export default function DashboardPage() {
                   >
                     {briefingLoading ? "생성 중..." : "생성하기"}
                   </button>
-                  <InfoTooltip text={'오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요. 하루를 마무리하며 오늘을 복기하고 싶을 때 눌러보세요.'} />
+                  <InfoTooltip
+                    text={
+                      "오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요. 하루를 마무리하며 오늘을 복기하고 싶을 때 눌러보세요."
+                    }
+                  />
                 </div>
               </div>
               <div className="card-b">
@@ -458,7 +501,11 @@ export default function DashboardPage() {
                   >
                     {marketingLoading ? "생성 중..." : "생성하기"}
                   </button>
-                  <InfoTooltip text={'오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요.'} />
+                  <InfoTooltip
+                    text={
+                      "오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요."
+                    }
+                  />
                 </div>
               </div>
               <div className="card-b">
@@ -487,7 +534,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 날씨 보정 성과 상세 + 요일 이상 탐지 상세 */}
+          {/* 날씨 대비 실제 성과 상세 + 요일 이상 탐지 상세 */}
           <div className="grid-2">
             <WeatherPerformance weather={weather} />
             <WeekdayAnomaly weekday={weekday} />
@@ -507,12 +554,16 @@ export default function DashboardPage() {
                       background: "oklch(0.92 0.06 290)",
                       color: "oklch(0.42 0.18 290)",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     PRO
                   </span>
-                  <InfoTooltip text={'요일과 시간대를 격자로 나눠, 어느 타이밍에 방문자가 몰리는지 색상으로 보여줘요.\n\n피크 타임과 한산한 시간대를 한눈에 파악해서 효율적인 운영 계획을 세울 수 있어요. PRO 플랜에서 이용 가능해요.'} />
+                  <InfoTooltip
+                    text={
+                      "요일과 시간대를 격자로 나눠, 어느 타이밍에 방문자가 몰리는지 색상으로 보여줘요.\n\n피크 타임과 한산한 시간대를 한눈에 파악해서 효율적인 운영 계획을 세울 수 있어요. PRO 플랜에서 이용 가능해요."
+                    }
+                  />
                 </div>
               </div>
               <div
@@ -541,10 +592,16 @@ export default function DashboardPage() {
                     gap: 8,
                     cursor: "pointer",
                     background: "rgba(255, 255, 255, 0.05)",
-                    transition: "background 0.2s"
+                    transition: "background 0.2s",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(35, 131, 226, 0.05)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(255, 255, 255, 0.05)")
+                  }
                 >
                   <Ic.Lock color="oklch(0.42 0.18 290)" />
                   <div
@@ -582,12 +639,16 @@ export default function DashboardPage() {
                       background: "oklch(0.92 0.06 290)",
                       color: "oklch(0.42 0.18 290)",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     PRO
                   </span>
-                  <InfoTooltip text={'Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요. PRO 플랜에서 이용 가능해요.'} />
+                  <InfoTooltip
+                    text={
+                      "Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요. PRO 플랜에서 이용 가능해요."
+                    }
+                  />
                 </div>
               </div>
               <div
@@ -640,10 +701,16 @@ export default function DashboardPage() {
                     gap: 8,
                     cursor: "pointer",
                     background: "rgba(255, 255, 255, 0.05)",
-                    transition: "background 0.2s"
+                    transition: "background 0.2s",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(35, 131, 226, 0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(35, 131, 226, 0.05)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(255, 255, 255, 0.05)")
+                  }
                 >
                   <Ic.Lock color="oklch(0.42 0.18 290)" />
                   <div
@@ -846,8 +913,8 @@ export default function DashboardPage() {
               style={{ padding: "6px 4px 12px", fontSize: 12 }}
             >
               <Ic.Shield color="#9AA3AF" />본 대시보드는 Vision AI 기반 익명
-              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별은
-              수행하지 않으며 모든 처리는 백엔드에서 수치화 후 폐기됩니다.
+              집계 데이터만 표시합니다. 얼굴 인식, 개인 식별은 수행하지 않으며
+              모든 처리는 백엔드에서 수치화 후 폐기됩니다.
             </div>
           )}
         </div>

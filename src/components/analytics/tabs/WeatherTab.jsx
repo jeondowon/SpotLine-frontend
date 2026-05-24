@@ -52,7 +52,7 @@ export default function WeatherTab({ data = {}, day }) {
         <div className="kpis" style={{marginTop: 10}}>
           {weatherImpact ? (
             <>
-              <KPI label="날씨 보정 성과"
+              <KPI label="날씨 대비 실제 성과"
                 icon={<Ic.Sun/>}
                 iconBg={resultBg(weatherImpact.result)}
                 iconFg={resultFg(weatherImpact.result)}
@@ -70,7 +70,7 @@ export default function WeatherTab({ data = {}, day }) {
                 hint="날씨 영향 제거 후"/>
             </>
           ) : (
-            <KPI label="날씨 보정 성과" icon={<Ic.Sun/>}
+            <KPI label="날씨 대비 실제 성과" icon={<Ic.Sun/>}
               iconBg="oklch(0.95 0.05 80)" iconFg="oklch(0.55 0.14 65)"
               value="—" hint="데이터 없음"/>
           )}
