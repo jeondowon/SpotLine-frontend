@@ -28,16 +28,16 @@ SpotLine은 매장 방문자 분석 플랫폼으로, CCTV 영상을 분석하여
 // Strip any residual markdown formatting from LLM output
 function stripMarkdown(text) {
   return text
-    .replace(/^#{1,6}\s+/gm, "")       // ### headings
-    .replace(/\*{2,3}([^*]+)\*{2,3}/g, "$1")  // **bold** / ***bold italic***
-    .replace(/\*([^*]+)\*/g, "$1")     // *italic*
-    .replace(/__([^_]+)__/g, "$1")     // __bold__
-    .replace(/_([^_]+)_/g, "$1")       // _italic_
-    .replace(/^---+$/gm, "")           // horizontal rules
-    .replace(/^\*\*\*+$/gm, "")        // *** rules
+    .replace(/^#{1,6}\s+/gm, "") // ### headings
+    .replace(/\*{2,3}([^*]+)\*{2,3}/g, "$1") // **bold** / ***bold italic***
+    .replace(/\*([^*]+)\*/g, "$1") // *italic*
+    .replace(/__([^_]+)__/g, "$1") // __bold__
+    .replace(/_([^_]+)_/g, "$1") // _italic_
+    .replace(/^---+$/gm, "") // horizontal rules
+    .replace(/^\*\*\*+$/gm, "") // *** rules
     .replace(/```[\s\S]*?```/g, (m) => m.replace(/```\w*\n?/g, "").trim()) // code blocks
-    .replace(/`([^`]+)`/g, "$1")       // inline code
-    .replace(/\n{3,}/g, "\n\n")        // excessive newlines
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/\n{3,}/g, "\n\n") // excessive newlines
     .trim();
 }
 
@@ -83,11 +83,14 @@ export default function ChatPage() {
 
   // Rotate tips every 4s while loading
   useEffect(() => {
-    if (!isLoading) return
-    setTipIndex(0)
-    const iv = setInterval(() => setTipIndex(i => (i + 1) % TIPS.length), 4000)
-    return () => clearInterval(iv)
-  }, [isLoading])
+    if (!isLoading) return;
+    setTipIndex(0);
+    const iv = setInterval(
+      () => setTipIndex((i) => (i + 1) % TIPS.length),
+      4000,
+    );
+    return () => clearInterval(iv);
+  }, [isLoading]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -203,7 +206,7 @@ export default function ChatPage() {
           <div className="hdr-right">
             <div className="chat-context-badge">
               <Ic.Bot />
-              <span>Llama 3.2 · 3B</span>
+              <span>gemma 4</span>
             </div>
             <div
               style={{
@@ -216,9 +219,7 @@ export default function ChatPage() {
               }}
             >
               <span
-                className={
-                  "chat-status-dot" + (isOnline ? "" : " offline")
-                }
+                className={"chat-status-dot" + (isOnline ? "" : " offline")}
               />
               {isOnline ? "온라인" : "오프라인"}
             </div>
@@ -284,9 +285,7 @@ export default function ChatPage() {
                       {isUser ? (
                         "U"
                       ) : (
-                        <Ic.Bot
-                          style={{ width: 16, height: 16 }}
-                        />
+                        <Ic.Bot style={{ width: 16, height: 16 }} />
                       )}
                     </div>
                     <div className="chat-msg-body">
@@ -307,19 +306,25 @@ export default function ChatPage() {
               {/* Typing indicator */}
               {isLoading && (
                 <div className="chat-typing">
-                  <div className="chat-msg-avatar" style={{
-                    background: "linear-gradient(135deg, var(--accent) 0%, oklch(0.55 0.16 265) 100%)",
-                    color: "#fff",
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    display: "grid",
-                    placeItems: "center",
-                    boxShadow: "0 2px 8px -2px oklch(0.55 0.16 265 / 0.3)",
-                  }}>
+                  <div
+                    className="chat-msg-avatar"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--accent) 0%, oklch(0.55 0.16 265) 100%)",
+                      color: "#fff",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: "0 2px 8px -2px oklch(0.55 0.16 265 / 0.3)",
+                    }}
+                  >
                     <Ic.Bot style={{ width: 16, height: 16 }} />
                   </div>
-                  <div style={{display:'flex', flexDirection:'column', gap:4}}>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 4 }}
+                  >
                     <div className="chat-thinking-label">
                       gemma4 is thinking...
                     </div>
@@ -356,14 +361,10 @@ export default function ChatPage() {
             </div>
             <div className="chat-status">
               <span
-                className={
-                  "chat-status-dot" + (isOnline ? "" : " offline")
-                }
+                className={"chat-status-dot" + (isOnline ? "" : " offline")}
               />
               <span>
-                {isOnline
-                  ? "Ollama 서버 연결됨"
-                  : "서버 연결 확인 중..."}
+                {isOnline ? "Ollama 서버 연결됨" : "서버 연결 확인 중..."}
               </span>
             </div>
           </div>
