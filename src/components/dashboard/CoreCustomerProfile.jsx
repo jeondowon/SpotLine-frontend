@@ -6,11 +6,12 @@ function genderKr(g) {
   const s = g.toLowerCase();
   if (s === "woman" || s === "female") return "여성";
   if (s === "man" || s === "male") return "남성";
-  return null;
+  return "미상";
 }
 
 function ageKr(a) {
-  if (!a || a === "UNKNOWN" || a === "unknown") return null;
+  if (!a) return null;
+  if (a === "UNKNOWN" || a === "unknown") return "미상";
   return a.replace("age", "").replace("s", "대");
 }
 
@@ -52,7 +53,7 @@ export default function CoreCustomerProfile({ core }) {
               </div>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: "var(--ink)", lineHeight: 1.2 }}>
-                  {[age, gender].filter(Boolean).join(" ") || "—"}
+                  {[...new Set([age, gender].filter(Boolean))].join(" ") || "—"}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>
                   오늘 가장 많이 방문한 고객층
