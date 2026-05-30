@@ -17,6 +17,17 @@ async function get(path) {
 }
 
 // 영상
+export async function streamVideoChunk(blob, createdAt) {
+  const formData = new FormData()
+  formData.append('createdAt', createdAt)
+  formData.append('fileChunk', blob)
+  const res = await fetch(`${BASE}/api/v1/video/stream`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+}
+
 export async function uploadVideo(file) {
   const today = new Date().toISOString().slice(0, 10)
   const formData = new FormData()
