@@ -44,7 +44,6 @@ export default function GenderCard({ day }) {
     <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
       <div className="card-h">
         <h3>성별 추정 분포</h3>
-        <span className="sub">· AI 추정 · 익명</span>
         <div className="right">
           <InfoTooltip
             text="Vision AI가 영상에서 익명으로 성별을 추정해 분포를 보여줘요.\n\n주요 고객의 성별 비중을 파악해서 상품 구성이나 마케팅 방향을 잡는 데 도움이 돼요."

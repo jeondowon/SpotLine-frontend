@@ -20,7 +20,7 @@ export default function ResponseWaitTimeCard({ startAt, endAt }) {
       iconFg="oklch(0.55 0.14 65)"
       value={data?.time != null ? `${data.time}` : '—'}
       unit={data?.time != null ? '분' : ''}
-      hint="손님 착석 후 최대 대기"
+      tooltip={"손님이 착석 후 직원 응대를 기다린 최대 시간이에요.\n이 값이 높으면 서비스 대기가 길었다는 신호예요."}
     />
   )
 }

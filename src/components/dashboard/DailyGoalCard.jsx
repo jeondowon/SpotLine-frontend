@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchDailySales, fetchDailyVisits } from '../../api/index'
 import { Ic } from '../ui/Icons'
+import InfoTooltip from '../ui/InfoTooltip'
 
 const KEY_SALES = 'spotline_goal_sales'
 const KEY_VISITS = 'spotline_goal_visits'
@@ -34,40 +35,33 @@ export default function DailyGoalCard({ startAt, endAt, day }) {
           <Ic.TrendUp />
         </div>
         <div className="lbl">오늘 목표 달성률</div>
+        <div className="info">
+          <InfoTooltip text={"설정에서 입력한 목표 대비 오늘의 달성률이에요.\n매출과 방문자 목표를 함께 추적할 수 있어요."} />
+        </div>
       </div>
       {noGoal ? (
-        <>
-          <div className="kpi-val mono">—</div>
-          <div className="kpi-foot">
-            <span style={{ color: 'var(--muted)' }}>설정에서 목표를 입력하세요</span>
-          </div>
-        </>
+        <div className="kpi-val mono">—</div>
       ) : (
-        <>
-          <div style={{ display: 'flex', gap: 20, marginTop: 6, alignItems: 'flex-end' }}>
-            {goalSales && (
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>매출</div>
-                <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
-                  {salesPct ?? '—'}
-                  {salesPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}
-                </div>
+        <div style={{ display: 'flex', gap: 20, marginTop: 6, alignItems: 'flex-end' }}>
+          {goalSales && (
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>매출</div>
+              <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
+                {salesPct ?? '—'}
+                {salesPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}
               </div>
-            )}
-            {goalVisits && (
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>방문자</div>
-                <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
-                  {visitsPct ?? '—'}
-                  {visitsPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}
-                </div>
+            </div>
+          )}
+          {goalVisits && (
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>방문자</div>
+              <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
+                {visitsPct ?? '—'}
+                {visitsPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}
               </div>
-            )}
-          </div>
-          <div className="kpi-foot">
-            <span style={{ color: 'var(--muted)' }}>오늘 목표 기준</span>
-          </div>
-        </>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

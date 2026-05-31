@@ -16,7 +16,6 @@ export default function VisitTrendCard({ startAt, endAt, selectedDay }) {
     <div className="card">
       <div className="card-h">
         <h3>방문 추세선</h3>
-        <span className="sub">· 5 / 10 / 20 / 60일 이동평균</span>
         <div className="right">
           <span className="chip dot">날씨 보정값</span>
           <InfoTooltip

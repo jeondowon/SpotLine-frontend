@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import Sidebar from "../components/layout/Sidebar";
+import AppLayout from "../components/layout/AppLayout";
+import HamburgerButton from "../components/layout/HamburgerButton";
 import { Ic } from "../components/ui/Icons";
 import "../styles/chat.css";
 
@@ -192,16 +193,11 @@ export default function ChatPage() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="app">
-      <Sidebar />
-      <main className="main">
+    <AppLayout>
         {/* Header */}
         <header className="hdr">
           <div>
             <div className="hdr-title">SpotLine AI 챗봇</div>
-            <div className="hdr-sub">
-              매장 인사이트에 대해 무엇이든 물어보세요
-            </div>
           </div>
           <div className="hdr-right">
             <div className="chat-context-badge">
@@ -223,6 +219,7 @@ export default function ChatPage() {
               />
               {isOnline ? "온라인" : "오프라인"}
             </div>
+            <HamburgerButton />
           </div>
         </header>
 
@@ -369,7 +366,6 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 }

@@ -26,7 +26,7 @@ export default function CurrentCountCard() {
       iconFg="oklch(0.42 0.12 155)"
       value={count != null ? `${count}` : '—'}
       unit={count != null ? '명' : ''}
-      hint="실시간 · 30초 갱신"
+      tooltip={"현재 매장 안에 있는 인원 수예요.\n카메라 영상을 실시간으로 분석해 30초마다 자동 갱신돼요."}
     />
   )
 }

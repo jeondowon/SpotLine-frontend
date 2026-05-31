@@ -16,7 +16,6 @@ export default function HourlyCongestionCard({ startAt, endAt }) {
     <div className="card">
       <div className="card-h">
         <h3>시간대별 혼잡도</h3>
-        <span className="sub">· 오늘 시간대별 방문자</span>
         <div className="right">
           <InfoTooltip
             text="오늘 하루 시간대별 방문자 수를 막대 그래프로 보여줘요.\n\n현재 시간대는 파란색, 피크 시간대는 노란색으로 강조돼요."

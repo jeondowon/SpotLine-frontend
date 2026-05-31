@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import Sidebar from '../components/layout/Sidebar'
+import AppLayout from '../components/layout/AppLayout'
+import HamburgerButton from '../components/layout/HamburgerButton'
 import { Ic } from '../components/ui/Icons'
 import {
   TweaksPanel, TweakSection, TweakColor, TweakSelect, TweakToggle,
@@ -77,7 +78,7 @@ function SectionCard({ title, icon, children }) {
 
 function FieldRow({ label, children }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12, alignItems: 'center' }}>
+    <div className="settings-field-row">
       <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>{label}</label>
       {children}
     </div>
@@ -250,20 +251,18 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="app">
-      <Sidebar/>
-
-      <main className="main" style={{
+    <AppLayout>
+      <div className="hdr">
+        <div>
+          <div className="hdr-title">설정</div>
+          <div className="hdr-sub">매장 분석 환경과 계정을 관리합니다</div>
+        </div>
+        <HamburgerButton />
+      </div>
+      <div style={{
         padding: t.density === 'compact' ? '24px' : '32px',
         display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 800,
       }}>
-        {/* header */}
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>설정</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#6B7280' }}>
-            매장 분석 환경과 계정을 관리합니다
-          </p>
-        </div>
 
         {/* 1. 매장 프로필 */}
         <SectionCard title="매장 프로필" icon={<Ic.Door color="#6B7280"/>}>
@@ -567,7 +566,7 @@ export default function SettingsPage() {
             Spotline v2.4.1 · 프라이버시 보호 분석 · 영상 저장 없음 · 얼굴 인식 없음
           </span>
         </div> */}
-      </main>
+      </div>
 
       {/* <TweaksPanel title="설정 페이지 Tweaks">
         <TweakSection label="테마">
@@ -585,6 +584,6 @@ export default function SettingsPage() {
             onChange={() => { setThreshLow(10); setThreshHigh(25) }}/>
         </TweakSection>
       </TweaksPanel> */}
-    </div>
+    </AppLayout>
   )
 }
