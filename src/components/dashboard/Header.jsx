@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import HamburgerButton from '../layout/HamburgerButton'
 
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 
@@ -62,6 +63,7 @@ export default function Header() {
           {closedLabel && <><Dot/><span>{closedLabel}</span></>}
         </div>
       </div>
+      <HamburgerButton />
     </header>
   )
 }

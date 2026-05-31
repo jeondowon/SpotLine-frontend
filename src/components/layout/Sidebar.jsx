@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Ic } from "../ui/Icons";
 import spotlineLogo from "../../assets/images/SpotLine_Logo.png";
 
+
 const NAV_ITEMS = [
   {
     id: "live",
@@ -18,11 +19,20 @@ const BOTTOM_ITEMS = [
   { id: "settings", label: "설정", ic: <Ic.Gear />, to: "/settings" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { pathname } = useLocation();
 
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
-    <aside className="sb">
+    <aside className={"sb" + (isOpen ? " sb--open" : "")}>
+      <div className="sb-toprow">
+        <button className="sb-close-btn" onClick={onClose}>
+          <Ic.Close />
+        </button>
+      </div>
       <Link
         to="/intro"
         className="sb-brand"
@@ -48,6 +58,7 @@ export default function Sidebar() {
               to={item.to}
               className={"sb-item" + (pathname === item.to ? " active" : "")}
               style={{ textDecoration: "none" }}
+              onClick={handleNavClick}
             >
               {item.ic}
               <span>{item.label}</span>
@@ -64,6 +75,7 @@ export default function Sidebar() {
             to={item.to}
             className={"sb-item" + (pathname === item.to ? " active" : "")}
             style={{ textDecoration: "none" }}
+            onClick={handleNavClick}
           >
             {item.ic}
             <span>{item.label}</span>

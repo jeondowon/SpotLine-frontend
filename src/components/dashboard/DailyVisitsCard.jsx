@@ -20,7 +20,7 @@ export default function DailyVisitsCard({ day }) {
       iconFg="oklch(0.5 0.095 218)"
       value={data?.totalVisits != null ? data.totalVisits.toLocaleString() : '—'}
       unit={data?.totalVisits != null ? '명' : ''}
-      hint="선택 날짜 총 방문"
+      tooltip={"선택한 날 매장을 방문한 총 인원이에요.\n입구 카메라 기준으로 집계해요."}
     />
   )
 }

@@ -20,7 +20,7 @@ export default function DailySalesCard({ startAt, endAt }) {
       iconFg="oklch(0.55 0.14 65)"
       value={data?.dailySales != null ? data.dailySales.toLocaleString() : '—'}
       unit={data?.dailySales != null ? '원' : ''}
-      hint="당일 누적 매출"
+      tooltip={"선택한 날의 누적 매출이에요.\nPOS 연동 데이터를 기준으로 집계해요."}
     />
   )
 }

@@ -20,7 +20,7 @@ export default function AvgDwellCard({ startAt, endAt }) {
       iconFg="oklch(0.42 0.12 155)"
       value={data?.time != null ? `${data.time}` : '—'}
       unit={data?.time != null ? '분' : ''}
-      hint="AI 분석 기준"
+      tooltip={"방문자가 매장 안에서 머문 평균 시간이에요.\nVision AI가 입장·퇴장 시간을 분석해 계산해요."}
     />
   )
 }

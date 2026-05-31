@@ -20,7 +20,7 @@ export default function PeekTimeCard({ startAt, endAt }) {
       iconFg="oklch(0.5 0.095 218)"
       value={data?.time != null ? `${data.time}` : '—'}
       unit={data?.time != null ? '시' : ''}
-      hint="가장 바쁜 시간대"
+      tooltip={"하루 중 방문자가 가장 많았던 시간대예요.\n이 시간에 맞춰 인력 배치나 프로모션을 준비해보세요."}
     />
   )
 }

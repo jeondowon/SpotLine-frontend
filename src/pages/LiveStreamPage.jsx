@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
-import Sidebar from '../components/layout/Sidebar'
+import AppLayout from '../components/layout/AppLayout'
+import HamburgerButton from '../components/layout/HamburgerButton'
 import { Ic } from '../components/ui/Icons'
 import { streamVideoChunk } from '../api'
 
@@ -64,20 +65,21 @@ export default function LiveStreamPage() {
   }, [])
 
   return (
-    <div className="app">
-      <Sidebar />
-      <div className="main">
+    <AppLayout>
         <div className="hdr">
           <div>
             <div className="hdr-title">라이브 분석</div>
             <div className="hdr-sub">실시간 YOLO 영상 분석 데모</div>
           </div>
-          {isStreaming && (
-            <div className="live-pill" style={{ marginLeft: 'auto' }}>
-              <div className="live-dot" />
-              스트리밍 중
-            </div>
-          )}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {isStreaming && (
+              <div className="live-pill">
+                <div className="live-dot" />
+                스트리밍 중
+              </div>
+            )}
+            <HamburgerButton />
+          </div>
         </div>
 
         <div className="content">
@@ -110,9 +112,9 @@ export default function LiveStreamPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 14, alignItems: 'stretch' }}>
+          <div className="live-action-row">
             <div className="card" style={{ flex: 1 }}>
-              <div className="card-b" style={{ display: 'flex', gap: 32 }}>
+              <div className="card-b" style={{ display: 'flex', gap: 32, justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>전송된 청크</div>
                   <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em' }}>{chunkCount}</div>
@@ -133,6 +135,7 @@ export default function LiveStreamPage() {
             </div>
 
             <button
+              className="live-action-btn"
               onClick={isStreaming ? stopStream : startStream}
               style={{
                 padding: '0 28px',
@@ -160,7 +163,6 @@ export default function LiveStreamPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </AppLayout>
   )
 }

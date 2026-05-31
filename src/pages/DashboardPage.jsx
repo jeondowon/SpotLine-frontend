@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "../components/layout/Sidebar";
+import AppLayout from "../components/layout/AppLayout";
 import Header from "../components/dashboard/Header";
 import DatePicker from "../components/ui/DatePicker";
 import { Ic } from "../components/ui/Icons";
@@ -64,9 +64,7 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="app">
-      <Sidebar />
-      <div className="main">
+    <AppLayout>
         <Header />
 
         <div className="content">
@@ -139,21 +137,10 @@ export default function DashboardPage() {
           </div>
 
           {/* 프리미엄 유도 배너 */}
-          <div
-            style={{
-              background:
-                "linear-gradient(90deg, #fff 40%, var(--accent-soft) 58%, var(--accent) 100%)",
-              border: "1px solid var(--line)",
-              borderRadius: "var(--radius)",
-              boxShadow: "var(--shadow-sm)",
-              overflow: "hidden",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-            }}
-          >
+          <div className="premium-banner">
             <div
               style={{
-                padding: "32px 32px",
+                padding: "24px",
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -182,29 +169,25 @@ export default function DashboardPage() {
               </div>
               <h2
                 style={{
-                  margin: "0 0 10px",
-                  fontSize: 21,
+                  margin: "0 0 8px",
+                  fontSize: 19,
                   fontWeight: 800,
                   color: "var(--ink)",
                   letterSpacing: "-0.025em",
-                  lineHeight: 1.4,
+                  lineHeight: 1.35,
                 }}
               >
-                왜 어떤 날은 잘 되고,
-                <br />
-                어떤 날은 안 될까요?
+                왜 어떤 날은 잘 되고, 어떤 날은 안 될까요?
               </h2>
               <p
                 style={{
-                  margin: "0 0 20px",
+                  margin: "0 0 18px",
                   fontSize: 13,
                   color: "var(--muted)",
-                  lineHeight: 1.75,
+                  lineHeight: 1.6,
                 }}
               >
-                알림 기능, 구역별 체류 분석, 방문자 특성까지
-                <br />
-                더욱 전문적인 분석을 기반으로 프리미엄이 해답을 찾아드릴게요.
+                알림·구역 분석·방문자 특성까지, 프리미엄으로 더 깊게 파악하세요.
               </p>
               <button
                 onClick={() => setIsPremiumModalOpen(true)}
@@ -323,7 +306,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="비주얼" />
@@ -344,6 +326,6 @@ export default function DashboardPage() {
       {isPremiumModalOpen && (
         <PremiumModal onClose={() => setIsPremiumModalOpen(false)} />
       )}
-    </div>
+    </AppLayout>
   );
 }
