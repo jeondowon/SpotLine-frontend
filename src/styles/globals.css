@@ -7,9 +7,9 @@
     --muted-2: #9AA3AF;
     --line: #ECEEF2;
     --line-2: #E3E6EC;
-    --accent: oklch(0.62 0.14 250);
-    --accent-soft: oklch(0.95 0.03 250);
-    --accent-ink: oklch(0.48 0.16 250);
+    --accent: oklch(0.66 0.12 210);
+    --accent-soft: oklch(0.955 0.03 205);
+    --accent-ink: oklch(0.5 0.095 218);
     --good: oklch(0.66 0.13 155);
     --good-soft: oklch(0.95 0.04 155);
     --warn: oklch(0.72 0.13 65);
@@ -35,7 +35,7 @@
   /* Sidebar */
   .sb{ background: #FBFCFD; border-right: 1px solid var(--line); padding: 18px 14px; display:flex; flex-direction:column; gap: 18px; position: sticky; top:0; height: 100vh; }
   .sb-brand{ display:flex; align-items:center; gap:10px; padding: 6px 8px 2px; }
-  .sb-mark{ width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--accent) 0%, oklch(0.55 0.16 265) 100%); position: relative; display:grid; place-items:center; }
+  .sb-mark{ width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--accent) 0%, oklch(0.5 0.13 220) 100%); position: relative; display:grid; place-items:center; }
   .sb-mark::after{ content:""; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
   .sb-name{ font-weight: 700; font-size: 14.5px; letter-spacing: -0.01em; }
   .sb-sub{ font-size: 11px; color: var(--muted-2); margin-top: 1px; letter-spacing: 0.02em; }
@@ -50,7 +50,7 @@
   .sb-item.active .badge{ background: rgba(255,255,255,.7); border-color: transparent; }
 
   .sb-store{ margin-top:auto; padding: 12px; border:1px solid var(--line); border-radius: 12px; background: #fff; display:flex; gap:10px; align-items:center; }
-  .sb-store .ava{ width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,#FFE6CC,#FFC78A); display:grid; place-items:center; font-weight:700; color:#8A4A14; font-size: 12px; }
+  .sb-store .ava{ width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg,#e0f2fe,#7dd3fc); display:grid; place-items:center; font-weight:700; color:#0c4a6e; font-size: 12px; }
   .sb-store .nm{ font-size: 12.5px; font-weight: 600; }
   .sb-store .pl{ font-size: 11px; color: var(--muted); margin-top: 1px; }
 
@@ -67,7 +67,7 @@
   .seg-tabs button.on{ background: var(--ink); color:#fff; }
   .icon-btn{ width: 34px; height: 34px; border-radius: 9px; border:1px solid var(--line-2); background:#fff; display:grid; place-items:center; color: var(--ink-2); cursor: default; }
   .icon-btn:hover{ background: #F4F6F9; }
-  .avatar{ width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #BFD2FF, #6E8CF0); color:#fff; display:grid; place-items:center; font-weight:700; font-size: 12px; }
+  .avatar{ width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #bae6fd, #38bdf8); color:#0c4a6e; display:grid; place-items:center; font-weight:700; font-size: 12px; }
 
   /* Content grid */
   .content{ padding: 22px 28px 36px; display:flex; flex-direction:column; gap: 18px; }

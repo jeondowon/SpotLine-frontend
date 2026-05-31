@@ -310,14 +310,14 @@ export default function ChatPage() {
                     className="chat-msg-avatar"
                     style={{
                       background:
-                        "linear-gradient(135deg, var(--accent) 0%, oklch(0.55 0.16 265) 100%)",
+                        "linear-gradient(135deg, var(--accent) 0%, oklch(0.5 0.13 220) 100%)",
                       color: "#fff",
                       width: 32,
                       height: 32,
                       borderRadius: 10,
                       display: "grid",
                       placeItems: "center",
-                      boxShadow: "0 2px 8px -2px oklch(0.55 0.16 265 / 0.3)",
+                      boxShadow: "0 2px 8px -2px oklch(0.5 0.13 220 / 0.3)",
                     }}
                   >
                     <Ic.Bot style={{ width: 16, height: 16 }} />

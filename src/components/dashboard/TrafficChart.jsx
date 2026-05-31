@@ -46,9 +46,9 @@ export default function TrafficChart({ style }) {
         {HOUR_DATA.map(([h]) => (
           <text key={h} x={x(h)} y={H - 10} fontSize="10" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{String(h).padStart(2, "0")}</text>
         ))}
-        <line x1={nowX} x2={nowX} y1={PAD_T} y2={H - PAD_B} stroke="oklch(0.62 0.14 250)" strokeWidth="1" strokeDasharray="2 3" opacity="0.55"/>
-        <rect x={nowX + 4} y={PAD_T + 2} width="48" height="16" rx="4" fill="oklch(0.95 0.03 250)"/>
-        <text x={nowX + 28} y={PAD_T + 13} fontSize="10" textAnchor="middle" fill="oklch(0.48 0.16 250)" fontWeight="600">현재 17시</text>
+        <line x1={nowX} x2={nowX} y1={PAD_T} y2={H - PAD_B} stroke="oklch(0.66 0.12 210)" strokeWidth="1" strokeDasharray="2 3" opacity="0.55"/>
+        <rect x={nowX + 4} y={PAD_T + 2} width="48" height="16" rx="4" fill="oklch(0.955 0.03 205)"/>
+        <text x={nowX + 28} y={PAD_T + 13} fontSize="10" textAnchor="middle" fill="oklch(0.5 0.095 218)" fontWeight="600">현재 17시</text>
         <path d={yestPath} fill="none" stroke="#C9D0DA" strokeWidth="1.6" strokeDasharray="4 4" strokeLinecap="round"/>
         {style !== "line" && <path d={areaPath} fill="url(#areaG)"/>}
         <path d={todayPath} fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round"/>

@@ -37,10 +37,9 @@ import {
 } from "../api/index";
 
 const TWEAK_DEFAULTS = {
-  accent: "#3B7CF6",
+  accent: "#00A5BB",
   showPrivacyBadge: true,
 };
-
 
 const AGE_KEYS = [
   { key: "age10s", label: "10대" },
@@ -282,7 +281,7 @@ export default function DashboardPage() {
     if (!persons || persons.length === 0) {
       return [
         { label: "여성", pct: 58, color: "oklch(0.7 0.13 0)" },
-        { label: "남성", pct: 42, color: "oklch(0.62 0.13 250)" },
+        { label: "남성", pct: 42, color: "oklch(0.58 0.12 210)" },
       ];
     }
     const f = persons.filter((p) => p.gender === "female").length;
@@ -292,7 +291,7 @@ export default function DashboardPage() {
       {
         label: "남성",
         pct: Number((100 - fPct).toFixed(1)),
-        color: "oklch(0.62 0.13 250)",
+        color: "oklch(0.58 0.12 210)",
       },
     ];
   })();
@@ -330,9 +329,9 @@ export default function DashboardPage() {
           <div className="kpis">
             <KPI
               label="오늘 방문자"
-              icon={<Ic.Users />}
-              iconBg="oklch(0.95 0.03 250)"
-              iconFg="oklch(0.48 0.16 250)"
+              icon={<Ic.User />}
+              iconBg="oklch(0.955 0.03 205)"
+              iconFg="oklch(0.5 0.095 218)"
               value={
                 dailyVisits?.totalVisits != null
                   ? typeof dailyVisits.totalVisits === "number"
@@ -348,8 +347,8 @@ export default function DashboardPage() {
             <KPI
               label="핵심 고객"
               icon={<Ic.Users />}
-              iconBg="oklch(0.95 0.03 250)"
-              iconFg="oklch(0.48 0.16 250)"
+              iconBg="oklch(0.955 0.03 205)"
+              iconFg="oklch(0.5 0.095 218)"
               value={coreLabel}
               hint="오늘 최다 방문 그룹"
             />
@@ -733,7 +732,7 @@ export default function DashboardPage() {
           {/* 프리미엄 유도 배너 */}
           <div
             style={{
-              background: "var(--accent-soft)",
+              background: "linear-gradient(90deg, #fff 40%, var(--accent-soft) 58%, var(--accent) 100%)",
               border: "1px solid var(--line)",
               borderRadius: "var(--radius)",
               boxShadow: "var(--shadow-sm)",
@@ -742,10 +741,10 @@ export default function DashboardPage() {
               gridTemplateColumns: "1fr 1fr",
             }}
           >
-            {/* 왼쪽: 흰색 절반 */}
+            {/* 왼쪽 */}
             <div
               style={{
-                background: "#fff",
+                background: "transparent",
                 padding: "32px 32px",
                 display: "flex",
                 flexDirection: "column",
@@ -818,7 +817,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* 오른쪽: 하늘색 배경 위 티저 스탯 */}
+            {/* 오른쪽: accent 그라디언트 배경 위 티저 스탯 */}
             <div
               style={{
                 display: "flex",
@@ -826,6 +825,7 @@ export default function DashboardPage() {
                 justifyContent: "center",
                 gap: 8,
                 padding: "16px 14px",
+                background: "transparent",
               }}
             >
               {[
@@ -925,7 +925,7 @@ export default function DashboardPage() {
         <TweakColor
           label="액센트"
           value={t.accent}
-          options={["#3B7CF6", "#2563EB", "#0EA5E9", "#7C3AED", "#10B981"]}
+          options={["#00A5BB", "#0284c7", "#0EA5E9", "#7C3AED", "#10B981"]}
           onChange={(v) => setTweak("accent", v)}
         />
 

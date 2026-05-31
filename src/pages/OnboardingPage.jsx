@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import spotLineLogo from "../assets/images/SpotLine_FullLogo.png";
 import "../styles/onboarding.css";
-import O from "./OnboardingIcons";
+import { Ic } from "../components/ui/Icons";
 import {
   BIZ,
   DAYS,
@@ -96,7 +96,7 @@ function FieldLabel({ children, req, filled }) {
       </span>
       {filled && (
         <span className="ob-check">
-          <O.Check />
+          <Ic.Check />
         </span>
       )}
     </div>
@@ -138,7 +138,7 @@ function Success({ s, onReset }) {
     <div className="ob-success">
       <div className="ring">
         <div className="dot">
-          <O.CheckLg />
+          <Ic.CheckLg />
         </div>
       </div>
       <h3>등록이 완료됐어요</h3>
@@ -151,15 +151,15 @@ function Success({ s, onReset }) {
           {bizIcon(s.biz)} {s.biz}
         </span>
         <span className="chip">
-          <O.Pin /> {s.loc}
+          <Ic.Pin /> {s.loc}
         </span>
         <span className="chip">
-          <O.Cal /> {hoursLabel(s)}
+          <Ic.Cal /> {hoursLabel(s)}
         </span>
       </div>
       <div className="btn-row">
         <Link to="/dashboard" className="ob-submit accent">
-          대시보드로 가기 <O.Arrow />
+          대시보드로 가기 <Ic.Arrow />
         </Link>
         <button className="ob-btn-ghost" onClick={onReset}>
           다시 입력
@@ -188,7 +188,7 @@ function LiveProfile({ s }) {
           {s.name.trim() || "매장명 미입력"}
         </div>
         <div className={"ploc" + (s.loc.trim() ? "" : " empty")}>
-          <O.Pin width="13" height="13" />{" "}
+          <Ic.Pin width="13" height="13" />{" "}
           {s.loc.trim() || "위치를 입력하면 여기 표시돼요"}
         </div>
         <div className="pmeta">
@@ -245,27 +245,27 @@ function LiveProfile({ s }) {
 
 const BENEFITS = [
   {
-    icon: <O.Spark />,
+    icon: <Ic.Spark />,
     title: "인사이트 리포트",
     desc: "매장 현황을 매일 자동 분석해 드려요",
   },
   {
-    icon: <O.Cal />,
+    icon: <Ic.Cal />,
     title: "트렌드 대시보드",
     desc: "매출·방문 패턴을 한눈에 파악하세요",
   },
   {
-    icon: <O.TrendUp />,
+    icon: <Ic.TrendUp />,
     title: "매장 성장 전략 추천",
     desc: "마케팅·매출 상승 전략을 제안해드려요",
   },
 ];
 
 const FLOW_STEPS = [
-  { icon: <O.Store />, label: "매장 정보 입력", desc: "지금 이 단계예요" },
-  { icon: <O.Camera />, label: "CCTV 연결", desc: "SpotLine 앱에서 진행해요" },
+  { icon: <Ic.Store />, label: "매장 정보 입력", desc: "지금 이 단계예요" },
+  { icon: <Ic.Video />, label: "CCTV 연결", desc: "SpotLine 앱에서 진행해요" },
   {
-    icon: <O.Spark />,
+    icon: <Ic.Spark />,
     label: "AI 분석 시작",
     desc: "등록 즉시 데이터 수집 시작",
   },
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                 매장명
               </FieldLabel>
               <TextField
-                icon={<O.Store />}
+                icon={<Ic.Store />}
                 value={s.name}
                 onChange={s.setName}
                 placeholder="예: 스팟라인 홍대점"
@@ -352,7 +352,7 @@ export default function OnboardingPage() {
                 위치
               </FieldLabel>
               <TextField
-                icon={<O.Pin />}
+                icon={<Ic.Pin />}
                 value={s.loc}
                 onChange={s.setLoc}
                 placeholder="도로명 주소를 입력하세요"
@@ -387,7 +387,7 @@ export default function OnboardingPage() {
               className={"ob-submit accent" + (s.valid ? "" : " disabled")}
               onClick={s.valid ? s.saveAndDone : undefined}
             >
-              매장 등록 완료 <O.Arrow />
+              매장 등록 완료 <Ic.Arrow />
             </button>
           </div>
         </div>

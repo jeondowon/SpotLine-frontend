@@ -17,7 +17,7 @@ function ageKr(a) {
 
 const GENDER_STYLE = {
   여성: { bg: "oklch(0.95 0.04 10)", fg: "oklch(0.50 0.16 10)" },
-  남성: { bg: "oklch(0.94 0.04 250)", fg: "oklch(0.45 0.16 250)" },
+  남성: { bg: "oklch(0.955 0.03 205)", fg: "oklch(0.5 0.095 218)" },
 };
 
 export default function CoreCustomerProfile({ core }) {
