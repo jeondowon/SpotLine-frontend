@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchRawAnalytics } from '../../api/index'
-import Donut from '../analytics/charts/Donut'
+import Donut from '../ui/Donut'
 import { Ic } from '../ui/Icons'
 import InfoTooltip from '../ui/InfoTooltip'
 import { ceil1 } from '../../utils/format'
