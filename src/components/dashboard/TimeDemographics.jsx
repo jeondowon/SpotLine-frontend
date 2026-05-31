@@ -12,7 +12,7 @@ const SLOTS = [
 const SLOT_COLORS = [
   "oklch(0.72 0.14 75)",
   "oklch(0.66 0.15 50)",
-  "oklch(0.62 0.14 250)",
+  "oklch(0.66 0.12 210)",
   "oklch(0.58 0.15 285)",
 ];
 

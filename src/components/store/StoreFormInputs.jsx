@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import '../../styles/onboarding.css'
-import O from '../../pages/OnboardingIcons'
+import { Ic } from '../ui/Icons'
 
 export const BIZ = [
-  { v: '카페',       ic: <O.Coffee />,   Ic: O.Coffee },
-  { v: '음식점',     ic: <O.Fork />,     Ic: O.Fork },
-  { v: '베이커리',   ic: <O.Bread />,    Ic: O.Bread },
-  { v: '주점 · 바',  ic: <O.Glass />,    Ic: O.Glass },
-  { v: '리테일 · 편의', ic: <O.Bag />,   Ic: O.Bag },
-  { v: '뷰티 · 헤어', ic: <O.Scissors />, Ic: O.Scissors },
-  { v: '의류 · 패션', ic: <O.Shirt />,   Ic: O.Shirt },
-  { v: '기타',       ic: <O.Dot />,      Ic: O.Dot },
+  { v: '카페',       ic: <Ic.Coffee />,   Ic: Ic.Coffee },
+  { v: '음식점',     ic: <Ic.Fork />,     Ic: Ic.Fork },
+  { v: '베이커리',   ic: <Ic.Bread />,    Ic: Ic.Bread },
+  { v: '주점 · 바',  ic: <Ic.Glass />,    Ic: Ic.Glass },
+  { v: '리테일 · 편의', ic: <Ic.Bag />,   Ic: Ic.Bag },
+  { v: '뷰티 · 헤어', ic: <Ic.Scissors />, Ic: Ic.Scissors },
+  { v: '의류 · 패션', ic: <Ic.Shirt />,   Ic: Ic.Shirt },
+  { v: '기타',       ic: <Ic.Dot />,      Ic: Ic.Dot },
 ]
 
 export const DAYS = ['월', '화', '수', '목', '금', '토', '일']
@@ -47,11 +47,11 @@ export function BizSelect({ value, onChange }) {
   return (
     <div className={'ob-select' + (open ? ' open' : '')} ref={ref}>
       <button className="ob-select-trigger" onClick={() => setOpen(o => !o)}>
-        <span className="ic">{value ? bizIcon(value) : <O.Tag />}</span>
+        <span className="ic">{value ? bizIcon(value) : <Ic.Tag />}</span>
         <span className={'ob-select-val' + (value ? '' : ' ph')}>
           {value || '업종을 선택하세요'}
         </span>
-        <span className="chev"><O.Chev /></span>
+        <span className="chev"><Ic.Chevron /></span>
       </button>
       {open && (
         <div className="ob-menu">
@@ -63,7 +63,7 @@ export function BizSelect({ value, onChange }) {
             >
               <span className="oic">{b.ic}</span>
               <span>{b.v}</span>
-              {b.v === value && <span className="ocheck"><O.Check /></span>}
+              {b.v === value && <span className="ocheck"><Ic.Check /></span>}
             </div>
           ))}
         </div>
@@ -113,7 +113,7 @@ function TimeSelect({ value, onChange }) {
 export function TimeRangeSelect({ value, onChange }) {
   return (
     <div className="ob-time-range">
-      <span className="ic"><O.Clock /></span>
+      <span className="ic"><Ic.Clock /></span>
       <PeriodSelect value={value.startPeriod} onChange={v => onChange({ ...value, startPeriod: v })} />
       <TimeSelect value={value.startTime} onChange={v => onChange({ ...value, startTime: v })} />
       <span className="ob-time-sep">~</span>

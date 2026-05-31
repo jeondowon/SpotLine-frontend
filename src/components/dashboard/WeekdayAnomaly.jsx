@@ -11,10 +11,10 @@ const RESULT_META = {
     zone: "이상 증가 (상위 2.3%)",
     desc: (dow) =>
       `이번 ${dow}요일은 이례적인 호황입니다. 효과 요인을 기록하세요.`,
-    bg: "oklch(0.95 0.03 250)",
-    ink: "oklch(0.48 0.16 250)",
-    dot: "oklch(0.62 0.14 250)",
-    barColor: "oklch(0.62 0.14 250)",
+    bg: "oklch(0.955 0.03 205)",
+    ink: "oklch(0.5 0.095 218)",
+    dot: "oklch(0.66 0.12 210)",
+    barColor: "oklch(0.66 0.12 210)",
   },
   BAD: {
     label: "이상 감소",
@@ -60,7 +60,7 @@ function ZoneBar({ result }) {
   const zones = [
     { key: "BAD",    label: "이상 감소", color: "oklch(0.90 0.06 25)",  flex: 1 },
     { key: "NORMAL", label: "정상 범위", color: "oklch(0.92 0.06 155)", flex: 2 },
-    { key: "GOOD",   label: "이상 증가", color: "oklch(0.92 0.05 250)", flex: 1 },
+    { key: "GOOD",   label: "이상 증가", color: "oklch(0.93 0.04 210)", flex: 1 },
   ];
 
   return (
