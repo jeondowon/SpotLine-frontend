@@ -10,8 +10,11 @@ async function post(path, body) {
   return res.json()
 }
 
-async function get(path) {
-  const res = await fetch(`${BASE}${path}`)
+async function get(path, params) {
+  const url = params
+    ? `${BASE}${path}?${new URLSearchParams(params)}`
+    : `${BASE}${path}`
+  const res = await fetch(url)
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
 }
@@ -50,49 +53,90 @@ export async function fetchVideoStatus(id) {
   return get(`/api/v1/video/${id}/status`)
 }
 
-// 통계
+// 통계 v1
 export async function fetchRawAnalytics(videoId) {
   return get(`/api/v1/analytics/raw?videoId=${videoId}`)
 }
 
 export async function fetchHourlyPopulation(startAt, endAt) {
-  return post('/api/v1/analytics/hourly-population', { startAt, endAt })
+  return get('/api/v1/analytics/hourly-population', { startAt, endAt })
 }
 
 export async function fetchCoreCustomers(startAt, endAt) {
-  return post('/api/v1/analytics/core-customers', { startAt, endAt })
+  return get('/api/v1/analytics/core-customers', { startAt, endAt })
 }
 
-export async function fetchWeatherImpact(day) {
-  return post('/api/v1/analytics/weather-impact', { day })
+export async function fetchWeatherImpact(startAt, endAt) {
+  return get('/api/v1/analytics/weather-impact', { startAt, endAt })
 }
 
-export async function fetchWeekdayPatterns(day, dayOfWeek) {
-  return post('/api/v1/analytics/weekday-patterns', { day, dayOfWeek })
-}
-
-export async function fetchVisitCount(startAt, endAt) {
-  return post('/api/v1/analytics/visits/count', { startAt, endAt })
+export async function fetchWeekdayPatterns(startAt, endAt) {
+  return get('/api/v1/analytics/weekday-patterns', { startAt, endAt })
 }
 
 export async function fetchTomorrowPrediction() {
-  return post('/api/v1/analytics/predictions/tomorrow')
+  return get('/api/v1/analytics/predictions/tomorrow')
 }
 
 export async function fetchNextWeekPrediction() {
-  return post('/api/v1/analytics/predictions/next-week')
+  return get('/api/v1/analytics/predictions/next-week')
 }
 
 export async function fetchDailyBriefing() {
-  return post('/api/v1/analytics/daily-briefing')
+  return get('/api/v1/analytics/daily-briefing')
 }
 
 export async function fetchMarketingRecommendations() {
-  return post('/api/v1/analytics/marketing-recommendations')
+  return get('/api/v1/analytics/marketing-recommendations')
 }
 
 export async function fetchDailyVisits(date) {
-  return get(`/api/v1/analytics/visits/daily?date=${date}`)
+  return get('/api/v1/analytics/visits/daily', { date })
+}
+
+// 통계 v2
+export async function fetchVisitTrend(startAt, endAt) {
+  return get('/api/v2/analytics/visit-trend', { startAt, endAt })
+}
+
+export async function fetchCurrentCount() {
+  return get('/api/v2/analytics/current-count')
+}
+
+export async function fetchPeekTime(startAt, endAt) {
+  return get('/api/v2/analytics/peek-time', { startAt, endAt })
+}
+
+export async function fetchDailySales(startAt, endAt) {
+  return get('/api/v2/analytics/daily-sales', { startAt, endAt })
+}
+
+export async function fetchBestMenu(startAt, endAt) {
+  return get('/api/v2/analytics/best-menu', { startAt, endAt })
+}
+
+export async function fetchResponseWaitTime(startAt, endAt) {
+  return get('/api/v2/analytics/response-wait-time', { startAt, endAt })
+}
+
+export async function fetchJustLeftCount(startAt, endAt) {
+  return get('/api/v2/analytics/just-left-count', { startAt, endAt })
+}
+
+export async function fetchEmptyTableTime(startAt, endAt) {
+  return get('/api/v2/analytics/empty-table-time', { startAt, endAt })
+}
+
+export async function fetchDailyCount(startAt, endAt) {
+  return get('/api/v2/analytics/daily-count', { startAt, endAt })
+}
+
+export async function fetchCoreCustomerV2(startAt, endAt) {
+  return get('/api/v2/analytics/core-customer', { startAt, endAt })
+}
+
+export async function fetchAvgDwell(startAt, endAt) {
+  return get('/api/v2/analytics/avg-dwell', { startAt, endAt })
 }
 
 // AI 챗봇

@@ -16,7 +16,7 @@ import {
   fetchCoreCustomers,
   fetchWeatherImpact,
   fetchWeekdayPatterns,
-  fetchVisitCount,
+  fetchVisitTrend,
   fetchTomorrowPrediction,
   fetchNextWeekPrediction,
 } from '../api/index'
@@ -79,17 +79,17 @@ export default function AnalyticsPage() {
       fetchHourlyPopulation(startAt, endAt),
       fetchCoreCustomers(startAt, endAt),
       fetchWeatherImpact(startAt),
-      ...Array.from({ length: 7 }, (_, i) => fetchWeekdayPatterns(startAt, i)),
-      fetchVisitCount(trendStartAt, endAt),
+      fetchWeekdayPatterns(startAt, endAt),
+      fetchVisitTrend(trendStartAt, endAt),
       fetchTomorrowPrediction(),
       fetchNextWeekPrediction(),
-    ]).then(([age, core, weather, wd0, wd1, wd2, wd3, wd4, wd5, wd6, visits, tomorrow, nextWeek]) => {
+    ]).then(([age, core, weather, weekday, visits, tomorrow, nextWeek]) => {
       if (cancelled) return
       setData({
         ageGroups: age.status === 'fulfilled' ? age.value : null,
         coreCustomer: core.status === 'fulfilled' ? core.value : null,
         weatherImpact: weather.status === 'fulfilled' ? weather.value : null,
-        weekdayPatterns: [wd0, wd1, wd2, wd3, wd4, wd5, wd6].map(r => r.status === 'fulfilled' ? r.value : null),
+        weekdayPatterns: weekday.status === 'fulfilled' ? weekday.value : null,
         visits: visits.status === 'fulfilled' ? visits.value : null,
         tomorrow: tomorrow.status === 'fulfilled' ? tomorrow.value : null,
         nextWeek: nextWeek.status === 'fulfilled' ? nextWeek.value : null,
