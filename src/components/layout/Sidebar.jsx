@@ -21,15 +21,6 @@ const BOTTOM_ITEMS = [
 export default function Sidebar() {
   const { pathname } = useLocation();
 
-  const isActive = (id) => {
-    if (id === "live") return pathname === "/live";
-    if (id === "dashboard") return pathname === "/dashboard";
-    if (id === "analytics") return pathname === "/analytics";
-    if (id === "settings") return pathname === "/settings";
-    if (id === "chat") return pathname === "/chat";
-    return false;
-  };
-
   return (
     <aside className="sb">
       <Link
@@ -51,26 +42,18 @@ export default function Sidebar() {
       <div>
         <div className="sb-section-label">메뉴</div>
         <nav className="sb-nav">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.id);
-            const inner = (
-              <>
-                {item.ic}
-                <span>{item.label}</span>
-                {item.badge && <span className="badge">{item.badge}</span>}
-              </>
-            );
-            return (
-              <Link
-                key={item.id}
-                to={item.to}
-                className={"sb-item" + (active ? " active" : "")}
-                style={{ textDecoration: "none" }}
-              >
-                {inner}
-              </Link>
-            );
-          })}
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.id}
+              to={item.to}
+              className={"sb-item" + (pathname === item.to ? " active" : "")}
+              style={{ textDecoration: "none" }}
+            >
+              {item.ic}
+              <span>{item.label}</span>
+              {item.badge && <span className="badge">{item.badge}</span>}
+            </Link>
+          ))}
         </nav>
       </div>
 
@@ -79,7 +62,7 @@ export default function Sidebar() {
           <Link
             key={item.id}
             to={item.to}
-            className={"sb-item" + (isActive(item.id) ? " active" : "")}
+            className={"sb-item" + (pathname === item.to ? " active" : "")}
             style={{ textDecoration: "none" }}
           >
             {item.ic}

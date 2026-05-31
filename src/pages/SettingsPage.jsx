@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import '../styles/analytics.css'
 import Sidebar from '../components/layout/Sidebar'
 import { Ic } from '../components/ui/Icons'
 import {
