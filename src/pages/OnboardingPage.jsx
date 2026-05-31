@@ -46,6 +46,8 @@ function useStore() {
     !!loc.trim(),
     hoursSet,
     openSet,
+    !!(breakTime.startTime && breakTime.endTime),
+    !!(dailyGoals.visitors || dailyGoals.revenue),
   ].filter(Boolean).length;
   const valid = !!name.trim() && !!biz && !!loc.trim();
 
@@ -127,11 +129,11 @@ function Progress({ count }) {
       <div className="meta">
         <span>입력 완성도</span>
         <span>
-          <b>{count}</b>/5
+          <b>{count}</b>/7
         </span>
       </div>
       <div className="ob-track">
-        <div style={{ width: `${(count / 5) * 100}%` }}></div>
+        <div style={{ width: `${(count / 7) * 100}%` }}></div>
       </div>
     </div>
   );
