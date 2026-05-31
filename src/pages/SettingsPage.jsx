@@ -6,9 +6,10 @@ import {
   TweaksPanel, TweakSection, TweakColor, TweakSelect, TweakToggle,
 } from '../components/ui/TweaksPanel'
 import { useTweaks } from '../hooks/useTweaks'
+import { BizSelect, DayPicker, TimeRangeSelect } from '../components/store/StoreFormInputs'
 
 const TWEAK_DEFAULTS = {
-  accent: '#3B7CF6',
+  accent: '#00A5BB',
   density: 'regular',
 }
 
@@ -198,10 +199,16 @@ export default function SettingsPage() {
   const [storeName,    setStoreName]    = useState(() => localStorage.getItem('store_name')    ?? '한동대학교 명성')
   const [storeAddress, setStoreAddress] = useState(() => localStorage.getItem('store_address') ?? '한동대학교')
   const [bizType,      setBizType]      = useState(() => localStorage.getItem('store_biz_type') ?? '음식점')
-  const [openTime,     setOpenTime]     = useState(() => localStorage.getItem('store_open_time')  ?? '09:00')
-  const [closeTime,    setCloseTime]    = useState(() => localStorage.getItem('store_close_time') ?? '22:00')
+  const [openHours,    setOpenHours]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem('store_open_hours')) ?? { startPeriod: '오전', startTime: '9:00', endPeriod: '오후', endTime: '10:00' } }
+    catch { return { startPeriod: '오전', startTime: '9:00', endPeriod: '오후', endTime: '10:00' } }
+  })
+  const [breakTime,    setBreakTime]    = useState(() => {
+    try { return JSON.parse(localStorage.getItem('store_break_time')) ?? { startPeriod: '오후', startTime: '', endPeriod: '오후', endTime: '' } }
+    catch { return { startPeriod: '오후', startTime: '', endPeriod: '오후', endTime: '' } }
+  })
   const [closedDays,   setClosedDays]   = useState(() => {
-    try { return JSON.parse(localStorage.getItem('store_closed_days')) ?? ['일'] } catch { return ['일'] }
+    try { return JSON.parse(localStorage.getItem('store_closed_days')) ?? [] } catch { return [] }
   })
   const [saved, setSaved] = useState(false)
 
@@ -232,9 +239,8 @@ export default function SettingsPage() {
     setTimeout(() => setWeatherTest('ok'), 1600)
   }
 
-  const DAYS = ['월', '화', '수', '목', '금', '토', '일']
-  const toggleDay = d => setClosedDays(prev =>
-    prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]
+  const toggleDay = i => setClosedDays(prev =>
+    prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i].sort()
   )
 
   const SYS_ITEMS = [
@@ -268,41 +274,20 @@ export default function SettingsPage() {
                 style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
             </FieldRow>
             <FieldRow label="업종">
-              <select value={bizType} onChange={e => setBizType(e.target.value)} style={{
-                height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8,
-                fontSize: 13, outline: 'none', background: '#fff', fontFamily: 'inherit',
-                width: '100%',
-              }}>
-                {['카페', '음식점', '소매점', '베이커리', '편의점'].map(v =>
-                  <option key={v}>{v}</option>
-                )}
-              </select>
+              <BizSelect value={bizType} onChange={setBizType} />
             </FieldRow>
             <FieldRow label="주소">
               <input type="text" value={storeAddress} onChange={e => setStoreAddress(e.target.value)} placeholder="주소 입력"
                 style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
             </FieldRow>
             <FieldRow label="영업시간">
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="text" value={openTime} onChange={e => setOpenTime(e.target.value)}
-                  style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
-                <span style={{ color: '#9AA3AF', fontSize: 13, flexShrink: 0 }}>~</span>
-                <input type="text" value={closeTime} onChange={e => setCloseTime(e.target.value)}
-                  style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
-              </div>
+              <TimeRangeSelect value={openHours} onChange={setOpenHours} />
+            </FieldRow>
+            <FieldRow label="브레이크타임">
+              <TimeRangeSelect value={breakTime} onChange={setBreakTime} />
             </FieldRow>
             <FieldRow label="휴무일">
-              <div style={{ display: 'flex', gap: 6 }}>
-                {DAYS.map(d => (
-                  <button key={d} onClick={() => toggleDay(d)} style={{
-                    width: 32, height: 32, borderRadius: 8, border: '1px solid',
-                    borderColor: closedDays.includes(d) ? 'var(--accent)' : '#E5E9EF',
-                    background: closedDays.includes(d) ? 'var(--accent)10' : '#fff',
-                    color: closedDays.includes(d) ? 'var(--accent)' : '#6B7280',
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  }}>{d}</button>
-                ))}
-              </div>
+              <DayPicker days={closedDays} toggleDay={toggleDay} />
             </FieldRow>
             <FieldRow label="관리자 계정">
               <TextInput defaultValue="admin@spotline.kr"/>
@@ -322,8 +307,8 @@ export default function SettingsPage() {
               localStorage.setItem('store_name',        storeName)
               localStorage.setItem('store_address',     storeAddress)
               localStorage.setItem('store_biz_type',    bizType)
-              localStorage.setItem('store_open_time',   openTime)
-              localStorage.setItem('store_close_time',  closeTime)
+              localStorage.setItem('store_open_hours',  JSON.stringify(openHours))
+              localStorage.setItem('store_break_time',  JSON.stringify(breakTime))
               localStorage.setItem('store_closed_days', JSON.stringify(closedDays))
               window.dispatchEvent(new Event('store-profile-updated'))
               setSaved(true)

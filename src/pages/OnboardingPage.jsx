@@ -1,33 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import spotLineLogo from "../assets/images/SpotLine_FullLogo.png";
 import "../styles/onboarding.css";
 import O from "./OnboardingIcons";
-
-const BIZ = [
-  { v: "카페", ic: <O.Coffee />, Ic: O.Coffee },
-  { v: "음식점", ic: <O.Fork />, Ic: O.Fork },
-  { v: "베이커리", ic: <O.Bread />, Ic: O.Bread },
-  { v: "주점 · 바", ic: <O.Glass />, Ic: O.Glass },
-  { v: "리테일 · 편의", ic: <O.Bag />, Ic: O.Bag },
-  { v: "뷰티 · 헤어", ic: <O.Scissors />, Ic: O.Scissors },
-  { v: "의류 · 패션", ic: <O.Shirt />, Ic: O.Shirt },
-  { v: "기타", ic: <O.Dot />, Ic: O.Dot },
-];
-
-const bizIcon = (v) => (BIZ.find((b) => b.v === v) || {}).ic;
-
-const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
-
-const TIMES_12H = [
-  "12:00",
-  "12:30",
-  ...Array.from({ length: 22 }, (_, i) => {
-    const h = Math.floor(i / 2) + 1;
-    const m = i % 2 === 0 ? "00" : "30";
-    return `${h}:${m}`;
-  }),
-];
+import {
+  BIZ,
+  DAYS,
+  bizIcon,
+  timeLabel,
+  BizSelect,
+  DayPicker,
+  TimeRangeSelect,
+} from "../components/store/StoreFormInputs";
 
 function useStore() {
   const [name, setName] = useState("");
@@ -64,6 +48,17 @@ function useStore() {
   ].filter(Boolean).length;
   const valid = !!name.trim() && !!biz && !!loc.trim();
 
+  const saveAndDone = () => {
+    localStorage.setItem("store_name", name);
+    localStorage.setItem("store_address", loc);
+    localStorage.setItem("store_biz_type", biz);
+    localStorage.setItem("store_open_hours", JSON.stringify(openHours));
+    localStorage.setItem("store_break_time", JSON.stringify(breakTime));
+    localStorage.setItem("store_closed_days", JSON.stringify(days));
+    window.dispatchEvent(new Event("store-profile-updated"));
+    setDone(true);
+  };
+
   return {
     name,
     setName,
@@ -79,6 +74,7 @@ function useStore() {
     setBreakTime,
     done,
     setDone,
+    saveAndDone,
     hoursSet,
     openSet,
     filledCount,
@@ -89,11 +85,6 @@ function useStore() {
 function hoursLabel(s) {
   if (s.days.length === 0) return "휴무일 없음";
   return s.days.map((i) => DAYS[i]).join("·") + "요일";
-}
-
-function timeLabel(t) {
-  if (!t.startTime || !t.endTime) return null;
-  return `${t.startPeriod} ${t.startTime} ~ ${t.endPeriod} ${t.endTime}`;
 }
 
 function FieldLabel({ children, req, filled }) {
@@ -121,133 +112,6 @@ function TextField({ icon, value, onChange, placeholder }) {
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  );
-}
-
-function BizSelect({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  return (
-    <div className={"ob-select" + (open ? " open" : "")} ref={ref}>
-      <button className="ob-select-trigger" onClick={() => setOpen((o) => !o)}>
-        <span className="ic">{value ? bizIcon(value) : <O.Tag />}</span>
-        <span className={"ob-select-val" + (value ? "" : " ph")}>
-          {value || "업종을 선택하세요"}
-        </span>
-        <span className="chev">
-          <O.Chev />
-        </span>
-      </button>
-      {open && (
-        <div className="ob-menu">
-          {BIZ.map((b) => (
-            <div
-              key={b.v}
-              className={"ob-opt" + (b.v === value ? " sel" : "")}
-              onClick={() => {
-                onChange(b.v);
-                setOpen(false);
-              }}
-            >
-              <span className="oic">{b.ic}</span>
-              <span>{b.v}</span>
-              {b.v === value && (
-                <span className="ocheck">
-                  <O.Check />
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DayPicker({ days, toggleDay }) {
-  return (
-    <div className="ob-days">
-      {DAYS.map((d, i) => (
-        <button
-          key={d}
-          className={
-            "ob-day" +
-            (days.includes(i) ? " on" : "") +
-            (i === 6 ? " sun" : i === 5 ? " sat" : "")
-          }
-          onClick={() => toggleDay(i)}
-        >
-          {d}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function PeriodSelect({ value, onChange }) {
-  return (
-    <select
-      className="ob-period-sel"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="오전">오전</option>
-      <option value="오후">오후</option>
-    </select>
-  );
-}
-
-function TimeSelect({ value, onChange }) {
-  return (
-    <select
-      className="ob-time-sel"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
-      <option value="">--:--</option>
-      {TIMES_12H.map((t) => (
-        <option key={t} value={t}>
-          {t}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function TimeRangeSelect({ value, onChange }) {
-  return (
-    <div className="ob-time-range">
-      <span className="ic">
-        <O.Clock />
-      </span>
-      <PeriodSelect
-        value={value.startPeriod}
-        onChange={(v) => onChange({ ...value, startPeriod: v })}
-      />
-      <TimeSelect
-        value={value.startTime}
-        onChange={(v) => onChange({ ...value, startTime: v })}
-      />
-      <span className="ob-time-sep">~</span>
-      <PeriodSelect
-        value={value.endPeriod}
-        onChange={(v) => onChange({ ...value, endPeriod: v })}
-      />
-      <TimeSelect
-        value={value.endTime}
-        onChange={(v) => onChange({ ...value, endTime: v })}
       />
     </div>
   );
@@ -521,7 +385,7 @@ export default function OnboardingPage() {
             <Progress count={s.filledCount} />
             <button
               className={"ob-submit accent" + (s.valid ? "" : " disabled")}
-              onClick={s.valid ? () => s.setDone(true) : undefined}
+              onClick={s.valid ? s.saveAndDone : undefined}
             >
               매장 등록 완료 <O.Arrow />
             </button>
