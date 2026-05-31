@@ -302,13 +302,13 @@ export default function SettingsPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E9EF', borderRadius: 8, overflow: 'hidden' }}>
                   <input
-                    type="number" min="0" step="100000"
+                    type="number" min="0" step="5"
                     value={dailyGoals.revenue}
                     onChange={e => setDailyGoals({ ...dailyGoals, revenue: e.target.value })}
                     placeholder="매출"
                     style={{ flex: 1, height: 36, padding: '0 10px', border: 'none', outline: 'none', fontSize: 13, fontFamily: 'inherit', minWidth: 0 }}
                   />
-                  <span style={{ padding: '0 10px', fontSize: 12, color: '#9AA3AF', borderLeft: '1px solid #E5E9EF', height: 36, display: 'flex', alignItems: 'center', flexShrink: 0 }}>원</span>
+                  <span style={{ padding: '0 10px', fontSize: 12, color: '#9AA3AF', borderLeft: '1px solid #E5E9EF', height: 36, display: 'flex', alignItems: 'center', flexShrink: 0 }}>만원</span>
                 </div>
               </div>
             </FieldRow>
