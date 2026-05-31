@@ -3,15 +3,23 @@ import { fetchDailySales, fetchDailyVisits } from '../../api/index'
 import { Ic } from '../ui/Icons'
 import InfoTooltip from '../ui/InfoTooltip'
 
-const KEY_SALES = 'spotline_goal_sales'
-const KEY_VISITS = 'spotline_goal_visits'
+function loadGoals() {
+  try {
+    const g = JSON.parse(localStorage.getItem('store_daily_goals')) ?? {}
+    return {
+      goalVisits: Number(g.visitors) || null,
+      goalSales: Number(g.revenue) ? Number(g.revenue) * 10000 : null, // 만원 → 원
+    }
+  } catch {
+    return { goalVisits: null, goalSales: null }
+  }
+}
 
 export default function DailyGoalCard({ startAt, endAt, day }) {
   const [sales, setSales] = useState(null)
   const [visits, setVisits] = useState(null)
 
-  const goalSales = Number(localStorage.getItem(KEY_SALES)) || null
-  const goalVisits = Number(localStorage.getItem(KEY_VISITS)) || null
+  const { goalSales, goalVisits } = loadGoals()
 
   useEffect(() => {
     if (!startAt || !endAt) return

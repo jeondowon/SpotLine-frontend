@@ -30,6 +30,7 @@ function useStore() {
     endPeriod: "오후",
     endTime: "",
   });
+  const [dailyGoals, setDailyGoals] = useState({ visitors: "", revenue: "" });
   const [done, setDone] = useState(false);
 
   const toggleDay = (i) =>
@@ -55,6 +56,7 @@ function useStore() {
     localStorage.setItem("store_open_hours", JSON.stringify(openHours));
     localStorage.setItem("store_break_time", JSON.stringify(breakTime));
     localStorage.setItem("store_closed_days", JSON.stringify(days));
+    localStorage.setItem("store_daily_goals", JSON.stringify(dailyGoals));
     window.dispatchEvent(new Event("store-profile-updated"));
     setDone(true);
   };
@@ -72,6 +74,8 @@ function useStore() {
     setOpenHours,
     breakTime,
     setBreakTime,
+    dailyGoals,
+    setDailyGoals,
     done,
     setDone,
     saveAndDone,
@@ -238,6 +242,24 @@ function LiveProfile({ s }) {
             </div>
           </div>
         </div>
+        <div className="pmeta">
+          <div className="m">
+            <div className="ml">방문 목표</div>
+            <div className={"mv" + (s.dailyGoals.visitors ? "" : " empty")}>
+              {s.dailyGoals.visitors
+                ? `${Number(s.dailyGoals.visitors).toLocaleString()}명`
+                : "미설정"}
+            </div>
+          </div>
+          <div className="m">
+            <div className="ml">매출 목표</div>
+            <div className={"mv" + (s.dailyGoals.revenue ? "" : " empty")}>
+              {s.dailyGoals.revenue
+                ? `${Number(s.dailyGoals.revenue).toLocaleString()}만원`
+                : "미설정"}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -378,6 +400,64 @@ export default function OnboardingPage() {
               <TimeRangeSelect value={s.breakTime} onChange={s.setBreakTime} />
               <div className="ob-hint">
                 브레이크타임이 없다면 비워두셔도 돼요.
+              </div>
+            </div>
+            <div className="ob-field">
+              <FieldLabel
+                filled={!!(s.dailyGoals.visitors || s.dailyGoals.revenue)}
+              >
+                일일 목표
+              </FieldLabel>
+              <div className="ob-goal-row">
+                <div className="ob-goal-field">
+                  <div className="ob-goal-sublabel">방문자 수 목표</div>
+                  <div className="ob-goal-input-wrap">
+                    <span className="ic">
+                      <Ic.Users />
+                    </span>
+                    <input
+                      className="ob-input"
+                      type="number"
+                      min="0"
+                      step="10"
+                      value={s.dailyGoals.visitors}
+                      onChange={(e) =>
+                        s.setDailyGoals({
+                          ...s.dailyGoals,
+                          visitors: e.target.value,
+                        })
+                      }
+                      placeholder="0"
+                    />
+                    <span className="ob-goal-unit">명</span>
+                  </div>
+                </div>
+                <div className="ob-goal-field">
+                  <div className="ob-goal-sublabel">매출 목표</div>
+                  <div className="ob-goal-input-wrap">
+                    <span className="ic">
+                      <Ic.TrendUp />
+                    </span>
+                    <input
+                      className="ob-input"
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={s.dailyGoals.revenue}
+                      onChange={(e) =>
+                        s.setDailyGoals({
+                          ...s.dailyGoals,
+                          revenue: e.target.value,
+                        })
+                      }
+                      placeholder="0"
+                    />
+                    <span className="ob-goal-unit">만원</span>
+                  </div>
+                </div>
+              </div>
+              <div className="ob-hint">
+                목표를 설정하면 대시보드에서 달성률을 확인할 수 있어요.
               </div>
             </div>
           </div>
