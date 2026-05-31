@@ -5,8 +5,15 @@ const LINES = [
   { label: '60일선', color: 'oklch(0.65 0.10 65)',  width: 1.6 },
 ]
 
+function movingAvg(arr, w) {
+  return arr.map((_, i) => {
+    const s = arr.slice(Math.max(0, i - w + 1), i + 1)
+    return s.reduce((a, b) => a + b, 0) / s.length
+  })
+}
+
 export default function TrendChart({ data, selectedDay }) {
-  if (!data?.date?.length) {
+  if (!data?.time?.length) {
     return (
       <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted-2)', fontSize: 13 }}>
         추세 데이터가 없습니다.
@@ -14,24 +21,28 @@ export default function TrendChart({ data, selectedDay }) {
     )
   }
 
-  // Find index of the selected date to start drawing from
-  let startIndex = 0;
+  const rawData = data.data ?? []
+  const maLines = [
+    movingAvg(rawData, 5),
+    movingAvg(rawData, 10),
+    movingAvg(rawData, 20),
+    movingAvg(rawData, 60),
+  ]
+
+  let startIndex = 0
   if (selectedDay) {
-    const idx = data.date.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10));
+    const idx = data.time.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10))
     if (idx !== -1) {
-      startIndex = idx;
-      
-      // UX Safety: If the remaining points are too few (e.g. less than 5), 
-      // show at least 5 days of history so the graph remains visually readable and useful.
-      const totalPoints = data.date.length;
+      startIndex = idx
+      const totalPoints = data.time.length
       if (totalPoints - startIndex < 5 && totalPoints >= 5) {
-        startIndex = totalPoints - 5;
+        startIndex = totalPoints - 5
       }
     }
   }
 
-  const slicedDate = data.date.slice(startIndex);
-  const slicedData = (data.data ?? []).map(line => line.slice(startIndex));
+  const slicedDate = data.time.slice(startIndex)
+  const slicedData = maLines.map(line => line.slice(startIndex))
 
   const W = 760, H = 220, PAD_L = 36, PAD_R = 14, PAD_T = 12, PAD_B = 24
   const innerW = W - PAD_L - PAD_R
