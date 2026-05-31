@@ -210,6 +210,10 @@ export default function SettingsPage() {
   const [closedDays,   setClosedDays]   = useState(() => {
     try { return JSON.parse(localStorage.getItem('store_closed_days')) ?? [] } catch { return [] }
   })
+  const [dailyGoals, setDailyGoals] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('store_daily_goals')) ?? { visitors: '', revenue: '' } }
+    catch { return { visitors: '', revenue: '' } }
+  })
   const [saved, setSaved] = useState(false)
 
   // 혼잡도
@@ -284,6 +288,30 @@ export default function SettingsPage() {
             <FieldRow label="브레이크타임">
               <TimeRangeSelect value={breakTime} onChange={setBreakTime} />
             </FieldRow>
+            <FieldRow label="일일 목표">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E9EF', borderRadius: 8, overflow: 'hidden' }}>
+                  <input
+                    type="number" min="0" step="10"
+                    value={dailyGoals.visitors}
+                    onChange={e => setDailyGoals({ ...dailyGoals, visitors: e.target.value })}
+                    placeholder="방문자 수"
+                    style={{ flex: 1, height: 36, padding: '0 10px', border: 'none', outline: 'none', fontSize: 13, fontFamily: 'inherit', minWidth: 0 }}
+                  />
+                  <span style={{ padding: '0 10px', fontSize: 12, color: '#9AA3AF', borderLeft: '1px solid #E5E9EF', height: 36, display: 'flex', alignItems: 'center', flexShrink: 0 }}>명</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E9EF', borderRadius: 8, overflow: 'hidden' }}>
+                  <input
+                    type="number" min="0" step="100000"
+                    value={dailyGoals.revenue}
+                    onChange={e => setDailyGoals({ ...dailyGoals, revenue: e.target.value })}
+                    placeholder="매출"
+                    style={{ flex: 1, height: 36, padding: '0 10px', border: 'none', outline: 'none', fontSize: 13, fontFamily: 'inherit', minWidth: 0 }}
+                  />
+                  <span style={{ padding: '0 10px', fontSize: 12, color: '#9AA3AF', borderLeft: '1px solid #E5E9EF', height: 36, display: 'flex', alignItems: 'center', flexShrink: 0 }}>원</span>
+                </div>
+              </div>
+            </FieldRow>
             <FieldRow label="휴무일">
               <DayPicker days={closedDays} toggleDay={toggleDay} />
             </FieldRow>
@@ -308,6 +336,7 @@ export default function SettingsPage() {
               localStorage.setItem('store_open_hours',  JSON.stringify(openHours))
               localStorage.setItem('store_break_time',  JSON.stringify(breakTime))
               localStorage.setItem('store_closed_days', JSON.stringify(closedDays))
+              localStorage.setItem('store_daily_goals', JSON.stringify(dailyGoals))
               window.dispatchEvent(new Event('store-profile-updated'))
               setSaved(true)
               setTimeout(() => setSaved(false), 2500)
