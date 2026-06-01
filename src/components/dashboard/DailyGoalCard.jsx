@@ -50,10 +50,10 @@ export default function DailyGoalCard({ startAt, endAt, day }) {
       {noGoal ? (
         <div className="kpi-val mono">—</div>
       ) : (
-        <div style={{ display: 'flex', gap: 20, marginTop: 6, alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 18, marginTop: 12, alignItems: 'baseline', flexWrap: 'wrap' }}>
           {goalSales && (
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>매출</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>매출</div>
               <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
                 {salesPct ?? '—'}
                 {salesPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}
@@ -61,8 +61,8 @@ export default function DailyGoalCard({ startAt, endAt, day }) {
             </div>
           )}
           {goalVisits && (
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>방문자</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>방문자</div>
               <div className="mono" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>
                 {visitsPct ?? '—'}
                 {visitsPct != null && <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--muted)', marginLeft: 3 }}>%</span>}

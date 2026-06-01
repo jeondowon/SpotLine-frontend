@@ -4,15 +4,12 @@ import spotLineLogo from "../assets/images/SpotLine_FullLogo.png";
 import "../styles/onboarding.css";
 import { Ic } from "../components/ui/Icons";
 import {
-  BIZ,
-  DAYS,
-  bizIcon,
-  timeLabel,
   AddressSearchInput,
   BizSelect,
   DayPicker,
   TimeRangeSelect,
 } from "../components/store/StoreFormInputs";
+import { BIZ, DAYS, bizIcon, timeLabel } from "../components/store/storeFormOptions";
 import { saveStore } from "../api/index";
 import { buildStorePayload, syncStoreProfile } from "../utils/storeProfile";
 

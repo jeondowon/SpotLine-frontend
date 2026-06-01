@@ -48,7 +48,7 @@ export default function CoreCustomerProfile({ startAt, endAt }) {
       <div className="card-h">
         <h3>핵심 고객 프로파일</h3>
         <div className="right">
-          <InfoTooltip text="오늘 매장을 가장 많이 방문한 핵심 고객 그룹이에요.\n\nVision AI가 성별과 연령대를 익명으로 추정해서 대표 그룹을 계산해요." />
+          <InfoTooltip text={"오늘 매장을 가장 많이 방문한 핵심 고객 그룹이에요.\n\nVision AI가 성별과 연령대를 익명으로 추정해서 대표 그룹을 계산해요."} />
         </div>
       </div>
       <div className="card-b">

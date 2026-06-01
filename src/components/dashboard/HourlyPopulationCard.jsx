@@ -31,7 +31,7 @@ export default function HourlyPopulationCard({ startAt, endAt }) {
         <h3>연령대 분포</h3>
         <div className="right">
           <InfoTooltip
-            text="오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요."
+            text={"오늘 방문한 손님을 연령대별로 나눠서 보여줘요.\n\nVision AI가 영상을 보고 익명으로 연령대를 추정한 통계예요."}
           />
         </div>
       </div>

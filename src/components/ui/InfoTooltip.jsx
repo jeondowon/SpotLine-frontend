@@ -6,6 +6,7 @@ export default function InfoTooltip({ text }) {
   const [coords, setCoords] = useState({ top: 0, right: 0 });
   const btnRef = useRef(null);
   const boxRef = useRef(null);
+  const displayText = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
 
   useEffect(() => {
     if (!open) return;
@@ -56,7 +57,7 @@ export default function InfoTooltip({ text }) {
             whiteSpace: 'pre-wrap',
           }}
         >
-          {text}
+          {displayText}
         </div>
       )}
     </>

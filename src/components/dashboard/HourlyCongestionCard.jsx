@@ -25,7 +25,7 @@ export default function HourlyCongestionCard({ startAt, endAt }) {
         <h3>시간대별 혼잡도</h3>
         <div className="right">
           <InfoTooltip
-            text="오늘 하루 시간대별 방문자 수를 선 그래프로 보여줘요.\n\n현재 시간대는 파란색, 피크 시간대는 네이비로 강조돼요."
+            text={"오늘 하루 시간대별 방문자 수를 선 그래프로 보여줘요.\n\n현재 시간대는 파란색, 피크 시간대는 네이비로 강조돼요."}
           />
         </div>
       </div>
