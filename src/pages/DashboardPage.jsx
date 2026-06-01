@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "../components/layout/AppLayout";
 import Header from "../components/dashboard/Header";
 import DatePicker from "../components/ui/DatePicker";
@@ -40,6 +40,165 @@ const TWEAK_DEFAULTS = {
   showPrivacyBadge: true,
 };
 
+const DASHBOARD_LINES = {
+  kpis: "kpis",
+  ops: "ops",
+  visitTrend: "visitTrend",
+  customerInsight: "customerInsight",
+  ai: "ai",
+  performance: "performance",
+  congestion: "congestion",
+};
+
+const DEFAULT_LINE_ORDER = [
+  DASHBOARD_LINES.kpis,
+  DASHBOARD_LINES.ops,
+  DASHBOARD_LINES.visitTrend,
+  DASHBOARD_LINES.customerInsight,
+  DASHBOARD_LINES.ai,
+  DASHBOARD_LINES.performance,
+  DASHBOARD_LINES.congestion,
+];
+
+const LINE_ORDER_BY_BIZ = {
+  카페: [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.ops,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.ai,
+    DASHBOARD_LINES.performance,
+  ],
+  음식점: [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.ops,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.performance,
+    DASHBOARD_LINES.ai,
+  ],
+  베이커리: [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.ops,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.performance,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.ai,
+  ],
+  "주점 · 바": [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.ops,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.ai,
+    DASHBOARD_LINES.performance,
+  ],
+  "리테일 · 편의": [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.performance,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.ai,
+    DASHBOARD_LINES.ops,
+  ],
+  "뷰티 · 헤어": [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.ops,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.performance,
+    DASHBOARD_LINES.ai,
+  ],
+  "의류 · 패션": [
+    DASHBOARD_LINES.kpis,
+    DASHBOARD_LINES.customerInsight,
+    DASHBOARD_LINES.visitTrend,
+    DASHBOARD_LINES.ai,
+    DASHBOARD_LINES.performance,
+    DASHBOARD_LINES.congestion,
+    DASHBOARD_LINES.ops,
+  ],
+  기타: DEFAULT_LINE_ORDER,
+};
+
+const DEFAULT_ITEM_ORDER = {
+  kpis: ["visits", "current", "sales", "goal"],
+  customerInsight: ["age", "prediction", "core"],
+  ai: ["briefing", "marketing"],
+  performance: ["weather", "weekday"],
+  congestion: ["hourly", "gender"],
+};
+
+const ITEM_ORDER_BY_BIZ = {
+  카페: {
+    kpis: ["current", "visits", "sales", "goal"],
+    customerInsight: ["core", "age", "prediction"],
+    ai: ["marketing", "briefing"],
+    performance: ["weather", "weekday"],
+    congestion: ["hourly", "gender"],
+  },
+  음식점: {
+    kpis: ["sales", "current", "goal", "visits"],
+    customerInsight: ["prediction", "core", "age"],
+    ai: ["marketing", "briefing"],
+    performance: ["weekday", "weather"],
+    congestion: ["hourly", "gender"],
+  },
+  베이커리: {
+    kpis: ["sales", "visits", "current", "goal"],
+    customerInsight: ["prediction", "core", "age"],
+    ai: ["marketing", "briefing"],
+    performance: ["weather", "weekday"],
+    congestion: ["hourly", "gender"],
+  },
+  "주점 · 바": {
+    kpis: ["current", "sales", "visits", "goal"],
+    customerInsight: ["core", "age", "prediction"],
+    ai: ["marketing", "briefing"],
+    performance: ["weekday", "weather"],
+    congestion: ["hourly", "gender"],
+  },
+  "리테일 · 편의": {
+    kpis: ["sales", "visits", "goal", "current"],
+    customerInsight: ["core", "age", "prediction"],
+    ai: ["marketing", "briefing"],
+    performance: ["weather", "weekday"],
+    congestion: ["hourly", "gender"],
+  },
+  "뷰티 · 헤어": {
+    kpis: ["sales", "current", "goal", "visits"],
+    customerInsight: ["core", "prediction", "age"],
+    ai: ["marketing", "briefing"],
+    performance: ["weekday", "weather"],
+    congestion: ["hourly", "gender"],
+  },
+  "의류 · 패션": {
+    kpis: ["sales", "visits", "goal", "current"],
+    customerInsight: ["core", "age", "prediction"],
+    ai: ["marketing", "briefing"],
+    performance: ["weather", "weekday"],
+    congestion: ["gender", "hourly"],
+  },
+  기타: DEFAULT_ITEM_ORDER,
+};
+
+function getStoredBizType() {
+  return localStorage.getItem("store_biz_type") ?? "음식점";
+}
+
+function orderedKeys(defaultOrder, customOrder) {
+  if (!customOrder) return defaultOrder;
+  const known = new Set(defaultOrder);
+  const ordered = customOrder.filter((key) => known.has(key));
+  return [...ordered, ...defaultOrder.filter((key) => !ordered.includes(key))];
+}
+
 function formatLocalDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -57,8 +216,19 @@ function getOneMonthBefore(day) {
 export default function DashboardPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [bizType, setBizType] = useState(getStoredBizType);
 
   const [day, setDay] = useState(() => new Date().toLocaleDateString("en-CA"));
+
+  useEffect(() => {
+    const refreshBizType = () => setBizType(getStoredBizType());
+    window.addEventListener("store-profile-updated", refreshBizType);
+    window.addEventListener("storage", refreshBizType);
+    return () => {
+      window.removeEventListener("store-profile-updated", refreshBizType);
+      window.removeEventListener("storage", refreshBizType);
+    };
+  }, []);
 
   const startAt = `${day}T00:00:00`;
   const endAt = `${day}T23:59:59`;
@@ -74,6 +244,129 @@ export default function DashboardPage() {
     day: "numeric",
     weekday: "long",
   });
+
+  const lineOrder = orderedKeys(
+    DEFAULT_LINE_ORDER,
+    LINE_ORDER_BY_BIZ[bizType],
+  );
+  const itemOrder = {
+    kpis: orderedKeys(DEFAULT_ITEM_ORDER.kpis, ITEM_ORDER_BY_BIZ[bizType]?.kpis),
+    customerInsight: orderedKeys(
+      DEFAULT_ITEM_ORDER.customerInsight,
+      ITEM_ORDER_BY_BIZ[bizType]?.customerInsight,
+    ),
+    ai: orderedKeys(DEFAULT_ITEM_ORDER.ai, ITEM_ORDER_BY_BIZ[bizType]?.ai),
+    performance: orderedKeys(
+      DEFAULT_ITEM_ORDER.performance,
+      ITEM_ORDER_BY_BIZ[bizType]?.performance,
+    ),
+    congestion: orderedKeys(
+      DEFAULT_ITEM_ORDER.congestion,
+      ITEM_ORDER_BY_BIZ[bizType]?.congestion,
+    ),
+  };
+
+  const kpiCards = {
+    visits: <DailyVisitsCard key="visits" day={day} />,
+    current: <CurrentCountCard key="current" />,
+    sales: <DailySalesCard key="sales" startAt={startAt} endAt={endAt} />,
+    goal: (
+      <DailyGoalCard key="goal" startAt={startAt} endAt={endAt} day={day} />
+    ),
+  };
+
+  const customerInsightCards = {
+    age: <HourlyPopulationCard key="age" startAt={startAt} endAt={endAt} />,
+    prediction: <PredictionDetail key="prediction" />,
+    core: <CoreCustomerProfile key="core" startAt={startAt} endAt={endAt} />,
+  };
+
+  const aiCards = {
+    briefing: (
+      <AIGenerateCard
+        key="briefing"
+        title="일일 브리핑"
+        fetch={fetchDailyBriefing}
+        tooltip={
+          "오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요."
+        }
+        emptyText="생성하기 버튼을 눌러 AI 브리핑을 받아보세요."
+      />
+    ),
+    marketing: (
+      <AIGenerateCard
+        key="marketing"
+        title="마케팅 추천"
+        fetch={fetchMarketingRecommendations}
+        tooltip={
+          "오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요."
+        }
+        emptyText="생성하기 버튼을 눌러 AI 마케팅 추천을 받아보세요."
+      />
+    ),
+  };
+
+  const performanceCards = {
+    weather: <WeatherPerformance key="weather" startAt={startAt} endAt={endAt} />,
+    weekday: <WeekdayAnomaly key="weekday" startAt={startAt} endAt={endAt} />,
+  };
+
+  const congestionCards = {
+    hourly: (
+      <HourlyCongestionCard key="hourly" startAt={startAt} endAt={endAt} />
+    ),
+    gender: <GenderCard key="gender" startAt={startAt} endAt={endAt} />,
+  };
+
+  function renderDashboardLine(line) {
+    switch (line) {
+      case DASHBOARD_LINES.kpis:
+        return (
+          <div className="kpis" key={line}>
+            {itemOrder.kpis.map((key) => kpiCards[key])}
+          </div>
+        );
+      case DASHBOARD_LINES.ops:
+        return (
+          <OperationalStatusCard key={line} startAt={startAt} endAt={endAt} />
+        );
+      case DASHBOARD_LINES.visitTrend:
+        return (
+          <VisitTrendCard
+            key={line}
+            startAt={trendStartAt}
+            endAt={endAt}
+            selectedDay={day}
+          />
+        );
+      case DASHBOARD_LINES.customerInsight:
+        return (
+          <div className="grid-second" key={line}>
+            {itemOrder.customerInsight.map((key) => customerInsightCards[key])}
+          </div>
+        );
+      case DASHBOARD_LINES.ai:
+        return (
+          <div className="grid-2" key={line}>
+            {itemOrder.ai.map((key) => aiCards[key])}
+          </div>
+        );
+      case DASHBOARD_LINES.performance:
+        return (
+          <div className="grid-2" key={line}>
+            {itemOrder.performance.map((key) => performanceCards[key])}
+          </div>
+        );
+      case DASHBOARD_LINES.congestion:
+        return (
+          <div className="grid-2 hourly-congestion-row" key={line}>
+            {itemOrder.congestion.map((key) => congestionCards[key])}
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <AppLayout>
@@ -95,58 +388,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 상단 KPI 4개: 방문자 · 현재인원 · 매출 · 목표달성률 */}
-          <div className="kpis">
-            <DailyVisitsCard day={day} />
-            <CurrentCountCard />
-            <DailySalesCard startAt={startAt} endAt={endAt} />
-            <DailyGoalCard startAt={startAt} endAt={endAt} day={day} />
-          </div>
-
-          {/* 운영 현황: 베스트메뉴 · 평균체류 · 최대응대대기 · 테이블유휴 · 그냥나간손님 */}
-          <OperationalStatusCard startAt={startAt} endAt={endAt} />
-
-          {/* 방문자 그래프: 선택 날짜 기준 1개월 범위 */}
-          <VisitTrendCard
-            startAt={trendStartAt}
-            endAt={endAt}
-            selectedDay={day}
-          />
-
-          {/* 연령대 분포 · 예측 · 핵심고객 프로파일 */}
-          <div className="grid-second">
-            <HourlyPopulationCard startAt={startAt} endAt={endAt} />
-            <PredictionDetail />
-            <CoreCustomerProfile startAt={startAt} endAt={endAt} />
-          </div>
-
-          {/* AI 브리핑 · 마케팅 추천 */}
-          <div className="grid-2">
-            <AIGenerateCard
-              title="일일 브리핑"
-              fetch={fetchDailyBriefing}
-              tooltip={"오늘 하루 매장 데이터를 AI가 분석해서 중요한 내용만 짧게 정리해줘요.\n\n방문자 수 변화, 고객 패턴, 특이사항 등을 빠르게 파악할 수 있어요."}
-              emptyText="생성하기 버튼을 눌러 AI 브리핑을 받아보세요."
-            />
-            <AIGenerateCard
-              title="마케팅 추천"
-              fetch={fetchMarketingRecommendations}
-              tooltip={"오늘의 방문 데이터와 고객 패턴을 분석해서 지금 매장에 맞는 마케팅 아이디어를 제안해줘요.\n\n어떤 고객이 많이 왔는지, 어떤 시간대가 한산했는지를 바탕으로 실질적인 액션을 추천해줘요."}
-              emptyText="생성하기 버튼을 눌러 AI 마케팅 추천을 받아보세요."
-            />
-          </div>
-
-          {/* 날씨 대비 성과 · 요일 이상 탐지 */}
-          <div className="grid-2">
-            <WeatherPerformance startAt={startAt} endAt={endAt} />
-            <WeekdayAnomaly startAt={startAt} endAt={endAt} />
-          </div>
-
-          {/* 시간대별 혼잡도 · 성별 분포 */}
-          <div className="grid-2 hourly-congestion-row">
-            <HourlyCongestionCard startAt={startAt} endAt={endAt} />
-            <GenderCard startAt={startAt} endAt={endAt} />
-          </div>
+          {lineOrder.map(renderDashboardLine)}
 
           {/* 프리미엄 유도 배너 */}
           <div className="premium-banner">

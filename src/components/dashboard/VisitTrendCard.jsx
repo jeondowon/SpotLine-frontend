@@ -25,7 +25,7 @@ export default function VisitTrendCard({ startAt, endAt, selectedDay }) {
         <h3>방문자 그래프</h3>
         <div className="right">
           <InfoTooltip
-            text="날짜별 방문자 수를 단순 선 그래프로 보여줘요.\n\n각 지점은 해당 날짜에 방문한 총 인원을 의미합니다."
+            text={"날짜별 방문자 수를 단순 선 그래프로 보여줘요.\n\n각 지점은 해당 날짜에 방문한 총 인원을 의미합니다."}
           />
         </div>
       </div>
