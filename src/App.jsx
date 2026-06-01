@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import PreviewPage from './pages/PreviewPage'
 import DashboardPage from './pages/DashboardPage'
 import SettingsPage from './pages/SettingsPage'
 import RawPage from './pages/RawPage'
@@ -10,7 +11,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/onboarding" replace/>}/>
+        <Route path="/" element={<PreviewPage/>}/>
         <Route path="/onboarding" element={<OnboardingPage/>}/>
         <Route path="/live" element={<LiveStreamPage/>}/>
         <Route path="/dashboard" element={<DashboardPage/>}/>
