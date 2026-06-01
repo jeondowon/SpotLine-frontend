@@ -8,7 +8,6 @@ export default function DailyVisitsCard({ day }) {
 
   useEffect(() => {
     if (!day) return
-    setData(null)
     fetchDailyVisits(day).then(setData).catch(() => {})
   }, [day])
 

@@ -8,7 +8,6 @@ export default function DailySalesCard({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setData(null)
     fetchDailySales(startAt, endAt).then(setData).catch(() => {})
   }, [startAt, endAt])
 

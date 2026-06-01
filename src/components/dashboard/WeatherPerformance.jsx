@@ -32,7 +32,6 @@ export default function WeatherPerformance({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setWeather(null)
     fetchWeatherImpact(startAt, endAt).then(setWeather).catch(() => {})
   }, [startAt, endAt])
 
@@ -88,7 +87,7 @@ export default function WeatherPerformance({ startAt, endAt }) {
           <BarRow label="기댓값" value={expectValue} max={maxVal} color="#CBD2DC" />
         </div>
 
-        <div style={{ ...{ height: 64, padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.45, boxSizing: 'border-box', overflow: 'hidden' }, background: m.bg, color: m.ink }}>
+        <div style={{ ...{ height: 64, padding: '10px 14px', borderRadius: 10, fontSize: 13, lineHeight: 1.45, boxSizing: 'border-box', overflow: 'hidden', marginTop: 'auto' }, background: m.bg, color: m.ink }}>
           <span style={{ display: 'block', fontWeight: 700, marginBottom: 3 }}>{m.zone}</span>
           {m.desc}
         </div>

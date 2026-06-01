@@ -1,4 +1,3 @@
-import { Ic } from './Icons'
 import Spark from './Spark'
 import InfoTooltip from './InfoTooltip'
 import { ceil1 } from '../../utils/format'

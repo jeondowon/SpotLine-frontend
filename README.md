@@ -20,6 +20,7 @@ npm run dev
 
 ```
 VITE_API_BASE_URL=
+VITE_KAKAO_REST_API_KEY=
 ```
 
 ## 협업 방식 (Git Flow)

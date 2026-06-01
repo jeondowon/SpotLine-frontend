@@ -17,7 +17,6 @@ export default function HourlyPopulationCard({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setData(null)
     fetchHourlyPopulation(startAt, endAt).then(setData).catch(() => {})
   }, [startAt, endAt])
 

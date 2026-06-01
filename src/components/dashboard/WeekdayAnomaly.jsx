@@ -17,17 +17,17 @@ function currentDow() { return (new Date().getDay() + 6) % 7 }
 
 function ZoneBar({ result }) {
   const zones = [
-    { key: 'BAD', label: '이상 감소', color: 'oklch(0.90 0.06 25)', flex: 1 },
-    { key: 'NORMAL', label: '정상 범위', color: 'oklch(0.92 0.06 155)', flex: 2 },
-    { key: 'GOOD', label: '이상 증가', color: 'oklch(0.93 0.04 210)', flex: 1 },
+    { key: 'BAD', label: '이상 감소', color: 'oklch(0.90 0.06 25)', active: 'oklch(0.62 0.13 25)', flex: 1 },
+    { key: 'NORMAL', label: '정상 범위', color: 'oklch(0.92 0.06 155)', active: 'oklch(0.55 0.11 155)', flex: 2 },
+    { key: 'GOOD', label: '이상 증가', color: 'oklch(0.93 0.04 210)', active: 'oklch(0.58 0.10 210)', flex: 1 },
   ]
   return (
     <div>
-      <div style={{ display: 'flex', height: 28, borderRadius: 8, overflow: 'hidden', gap: 2 }}>
-        {zones.map((z) => (
-          <div key={z.key} style={{ flex: z.flex, background: z.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 600, color: result === z.key ? 'var(--ink)' : 'var(--muted-2)', position: 'relative', outline: result === z.key ? '2px solid var(--ink-2)' : 'none', outlineOffset: -2 }}>
+      <div style={{ display: 'flex', height: 28, gap: 2 }}>
+        {zones.map((z, i) => (
+          <div key={z.key} style={{ flex: z.flex, background: z.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 600, color: result === z.key ? z.active : 'var(--muted-2)', position: 'relative', borderRadius: i === 0 ? '8px 0 0 8px' : i === zones.length - 1 ? '0 8px 8px 0' : 0, boxShadow: result === z.key ? `inset 0 0 0 2px ${z.active}` : 'none', zIndex: result === z.key ? 1 : 0 }}>
             {z.label}
-            {result === z.key && <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid var(--ink-2)' }} />}
+            {result === z.key && <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: `5px solid ${z.active}` }} />}
           </div>
         ))}
       </div>
@@ -53,7 +53,6 @@ export default function WeekdayAnomaly({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setWeekday(null)
     fetchWeekdayPatterns(startAt, endAt).then(setWeekday).catch(() => {})
   }, [startAt, endAt])
 

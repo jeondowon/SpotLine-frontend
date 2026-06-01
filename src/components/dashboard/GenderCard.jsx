@@ -1,15 +1,38 @@
+import { useEffect, useState } from 'react'
 import Donut from '../ui/Donut'
 import { Ic } from '../ui/Icons'
 import InfoTooltip from '../ui/InfoTooltip'
 import { ceil1 } from '../../utils/format'
+import { fetchGenderDistribution } from '../../api/index'
 
-const FALLBACK_SLICES = [
-  { label: '여성', pct: 58, color: 'oklch(0.7 0.13 0)' },
-  { label: '남성', pct: 42, color: 'oklch(0.58 0.12 210)' },
-]
+const FEMALE_COLOR = 'oklch(0.7 0.13 0)'
+const MALE_COLOR = 'oklch(0.58 0.12 210)'
 
-export default function GenderCard() {
-  const slices = FALLBACK_SLICES
+export default function GenderCard({ startAt, endAt }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    if (!startAt || !endAt) return
+    let active = true
+    fetchGenderDistribution(startAt, endAt)
+      .then((nextData) => {
+        if (active) setData(nextData)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [startAt, endAt])
+
+  const female = Number(data?.female) || 0
+  const male = Number(data?.male) || 0
+  const total = female + male
+  const slices = total > 0
+    ? [
+        { label: '여성', pct: (female / total) * 100, color: FEMALE_COLOR },
+        { label: '남성', pct: (male / total) * 100, color: MALE_COLOR },
+      ]
+    : []
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -23,24 +46,30 @@ export default function GenderCard() {
       </div>
       <div
         className="card-b"
-        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px' }}
+        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 10px 10px' }}
       >
-        <div className="donut-wrap" style={{ gap: 100 }}>
-          <Donut slices={slices} label="전체" size={170} />
-          <div className="donut-legend">
-            {slices.map((s) => (
-              <div className="row" key={s.label}>
-                <span className="sw" style={{ background: s.color }} />
-                <span>{s.label}</span>
-                <span className="v mono">{ceil1(s.pct)}%</span>
+        {total > 0 ? (
+          <div className="donut-wrap gender-donut-wrap">
+            <Donut slices={slices} label="전체" size={140} />
+            <div className="donut-legend">
+              {slices.map((s) => (
+                <div className="row" key={s.label}>
+                  <span className="sw" style={{ background: s.color }} />
+                  <span>{s.label}</span>
+                  <span className="v mono">{ceil1(s.pct)}%</span>
+                </div>
+              ))}
+              <div className="priv" style={{ marginTop: 6 }}>
+                <Ic.Shield color="#9AA3AF" />
+                외관 기반 추정 · 얼굴 식별 없음
               </div>
-            ))}
-            <div className="priv" style={{ marginTop: 6 }}>
-              <Ic.Shield color="#9AA3AF" />
-              외관 기반 추정 · 얼굴 식별 없음
             </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ color: 'var(--muted-2)', fontSize: 13 }}>
+            성별 분포 데이터가 없습니다.
+          </div>
+        )}
       </div>
     </div>
   )

@@ -8,7 +8,6 @@ export default function PeekTimeCard({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setData(null)
     fetchPeekTime(startAt, endAt).then(setData).catch(() => {})
   }, [startAt, endAt])
 

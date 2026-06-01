@@ -36,7 +36,6 @@ export default function CoreCustomerProfile({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setCore(null)
     fetchCoreCustomers(startAt, endAt).then(setCore).catch(() => {})
   }, [startAt, endAt])
 

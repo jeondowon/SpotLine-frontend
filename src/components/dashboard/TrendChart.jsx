@@ -1,16 +1,4 @@
-const LINES = [
-  { label: '5일선',  color: 'var(--accent)',        width: 2.2 },
-  { label: '10일선', color: 'oklch(0.60 0.12 290)', width: 1.8 },
-  { label: '20일선', color: 'oklch(0.62 0.13 155)', width: 1.8 },
-  { label: '60일선', color: 'oklch(0.65 0.10 65)',  width: 1.6 },
-]
-
-function movingAvg(arr, w) {
-  return arr.map((_, i) => {
-    const s = arr.slice(Math.max(0, i - w + 1), i + 1)
-    return s.reduce((a, b) => a + b, 0) / s.length
-  })
-}
+const LINE_COLOR = 'var(--accent)'
 
 export default function TrendChart({ data, selectedDay }) {
   if (!data?.time?.length) {
@@ -22,58 +10,40 @@ export default function TrendChart({ data, selectedDay }) {
   }
 
   const rawData = data.data ?? []
-  const maLines = [
-    movingAvg(rawData, 5),
-    movingAvg(rawData, 10),
-    movingAvg(rawData, 20),
-    movingAvg(rawData, 60),
-  ]
 
-  let startIndex = 0
-  if (selectedDay) {
-    const idx = data.time.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10))
-    if (idx !== -1) {
-      startIndex = idx
-      const totalPoints = data.time.length
-      if (totalPoints - startIndex < 5 && totalPoints >= 5) {
-        startIndex = totalPoints - 5
-      }
-    }
-  }
-
-  const slicedDate = data.time.slice(startIndex)
-  const slicedData = maLines.map(line => line.slice(startIndex))
+  const slicedDate = data.time
+  const slicedData = rawData
+  const selectedIndex = selectedDay
+    ? slicedDate.findIndex(d => d.slice(0, 10) === selectedDay.slice(0, 10))
+    : -1
 
   const W = 760, H = 220, PAD_L = 36, PAD_R = 14, PAD_T = 12, PAD_B = 24
   const innerW = W - PAD_L - PAD_R
   const innerH = H - PAD_T - PAD_B
   const n = slicedDate.length
 
-  const allVals = slicedData.flat().filter(v => v != null && !isNaN(v))
-  const minRaw = allVals.length ? Math.min(...allVals) : 0
+  const allVals = slicedData.filter(v => v != null && !isNaN(v))
   const maxRaw = allVals.length ? Math.max(...allVals) : 100
-  const spread = (maxRaw - minRaw) || maxRaw * 0.05 || 1
-  const pad = spread * 0.05
-  const minY = Math.max(0, minRaw - pad)
-  const maxY = maxRaw + pad
+  const minY = 0
+  const maxY = Math.max(10, Math.ceil(maxRaw * 1.1))
   const range = maxY - minY || 1
 
   const xi = i => PAD_L + (n > 1 ? i / (n - 1) : 0.5) * innerW
   const yv = v => PAD_T + innerH - ((v - minY) / range) * innerH
 
-  const pathFor = vals => {
-    const pts = vals
-      .map((v, i) => (v != null ? `${xi(i).toFixed(1)},${yv(v).toFixed(1)}` : null))
-      .filter(Boolean)
-    return pts.length >= 2 ? `M${pts.join(' L')}` : ''
-  }
+  const points = slicedData
+    .map((v, i) => (v != null ? { x: xi(i), y: yv(v), value: v, date: slicedDate[i] } : null))
+    .filter(Boolean)
+  const linePath = points.length >= 2
+    ? `M${points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L')}`
+    : ''
 
   const step = Math.max(1, Math.floor(n / 6))
   const dateLabels = slicedDate
     .map((d, i) => ({ label: d.slice(5, 10), i }))
     .filter(({ i }) => i % step === 0 || i === n - 1)
 
-  const gridStep = 5
+  const gridStep = Math.max(1, Math.ceil(maxY / 4 / 10) * 10)
   const gridStart = Math.ceil(minY / gridStep) * gridStep
   const gridVals = []
   for (let v = gridStart; v <= maxY; v += gridStep) gridVals.push(v)
@@ -95,31 +65,25 @@ export default function TrendChart({ data, selectedDay }) {
           <text key={i} x={xi(i)} y={H - 6} fontSize="10" textAnchor="middle" fill="#9AA3AF" fontFamily="JetBrains Mono">{label}</text>
         ))}
 
-        {slicedData.slice(0, LINES.length).map((vals, li) => {
-          const d = pathFor(vals)
-          return d ? (
-            <path key={li} d={d} fill="none" stroke={LINES[li].color} strokeWidth={LINES[li].width} strokeLinecap="round" strokeLinejoin="round" />
-          ) : null
-        })}
+        {linePath && (
+          <path d={linePath} fill="none" stroke={LINE_COLOR} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+        {points.map((p, i) => (
+          <circle
+            key={`${p.date}-${i}`}
+            cx={p.x}
+            cy={p.y}
+            r={i === selectedIndex ? '5' : '3.5'}
+            fill="#fff"
+            stroke={i === selectedIndex ? 'var(--ink)' : LINE_COLOR}
+            strokeWidth={i === selectedIndex ? '2.4' : '2'}
+          />
+        ))}
       </svg>
 
       <div className="legend">
-        {LINES.slice(0, slicedData.length).map(l => (
-          <div key={l.label}><span className="sw" style={{ background: l.color }} />{l.label}</div>
-        ))}
-        {(() => {
-          const ma5 = slicedData?.[0] ?? []
-          const ma20 = slicedData?.[2] ?? []
-          const pairs = []
-          for (let i = ma5.length - 1; i >= 0 && pairs.length < 2; i--) {
-            if (ma5[i] != null && ma20[i] != null) pairs.unshift([ma5[i], ma20[i]])
-          }
-          if (pairs.length < 2) return <div style={{ marginLeft: 'auto', fontSize: 11, color: '#9AA3AF' }}>단위: 날씨 보정 방문자(명)</div>
-          const [[a0, b0], [a1, b1]] = pairs
-          if (a0 <= b0 && a1 > b1) return <div style={{ marginLeft: 'auto', fontSize: 11, color: 'oklch(0.55 0.14 65)', fontWeight: 600 }}>↑ 골든크로스 · 단기 상승 전환</div>
-          if (a0 >= b0 && a1 < b1) return <div style={{ marginLeft: 'auto', fontSize: 11, color: 'oklch(0.45 0.16 25)', fontWeight: 600 }}>↓ 데드크로스 · 단기 하락 주의</div>
-          return <div style={{ marginLeft: 'auto', fontSize: 11, color: '#9AA3AF' }}>단위: 날씨 보정 방문자(명)</div>
-        })()}
+        <div><span className="sw" style={{ background: LINE_COLOR }} />일별 방문자 수</div>
+        <div style={{ marginLeft: 'auto', fontSize: 11, color: '#9AA3AF' }}>단위: 방문자(명)</div>
       </div>
     </div>
   )
