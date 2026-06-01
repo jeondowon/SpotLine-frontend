@@ -10,6 +10,7 @@
   --accent: oklch(0.66 0.12 210);
   --accent-soft: oklch(0.955 0.03 205);
   --accent-ink: oklch(0.5 0.095 218);
+  --navy: #1e3a8a;
   --good: oklch(0.66 0.13 155);
   --good-soft: oklch(0.95 0.04 155);
   --warn: oklch(0.72 0.13 65);
@@ -532,20 +533,20 @@ button {
 
 /* Traffic chart */
 .chart-wrap {
-  padding: 8px 4px 4px;
+  padding: 6px 2px 4px;
 }
 .chart-svg {
   width: 100%;
-  height: 260px;
+  height: 220px;
   display: block;
 }
 .legend {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted);
-  padding: 6px 12px 0 12px;
+  padding: 4px 10px 0 10px;
 }
 .legend .sw {
   width: 10px;
@@ -1115,6 +1116,9 @@ button {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+.grid-2.hourly-congestion-row {
+  grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.85fr);
+}
 
 /* 운영현황 그리드 */
 .ops-grid {
@@ -1226,17 +1230,20 @@ button {
   align-items: center;
   gap: 18px;
 }
+.gender-donut-wrap {
+  gap: 22px;
+}
 .donut-legend {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 12.5px;
+  gap: 6px;
+  font-size: 12px;
 }
 .donut-legend .row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .donut-legend .sw {
   width: 10px;
@@ -1255,7 +1262,8 @@ button {
 }
 
 @media (max-width: 860px) {
-  .grid-2 {
+  .grid-2,
+  .grid-2.hourly-congestion-row {
     grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import HamburgerButton from '../layout/HamburgerButton'
+import { fetchStore } from '../../api/index'
+import { syncStoreProfile } from '../../utils/storeProfile'
 
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일']
 
@@ -32,6 +34,20 @@ export default function Header() {
     const refresh = () => setProfile(readProfile())
     window.addEventListener('store-profile-updated', refresh)
     return () => window.removeEventListener('store-profile-updated', refresh)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    fetchStore()
+      .then(store => {
+        if (!active) return
+        syncStoreProfile(store)
+        setProfile(readProfile())
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
   }, [])
 
   const { name, address, bizType, openHours, breakTime, closedDays } = profile

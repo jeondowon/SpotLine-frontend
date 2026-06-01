@@ -225,6 +225,9 @@
   }
 }
 .ob-opt {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 10px;

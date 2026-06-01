@@ -8,15 +8,20 @@ import {
   DAYS,
   bizIcon,
   timeLabel,
+  AddressSearchInput,
   BizSelect,
   DayPicker,
   TimeRangeSelect,
 } from "../components/store/StoreFormInputs";
+import { saveStore } from "../api/index";
+import { buildStorePayload, syncStoreProfile } from "../utils/storeProfile";
 
 function useStore() {
   const [name, setName] = useState("");
   const [biz, setBiz] = useState("");
   const [loc, setLoc] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [days, setDays] = useState([]);
   const [openHours, setOpenHours] = useState({
     startPeriod: "오전",
@@ -32,6 +37,8 @@ function useStore() {
   });
   const [dailyGoals, setDailyGoals] = useState({ visitors: "", revenue: "" });
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const toggleDay = (i) =>
     setDays((d) =>
@@ -40,27 +47,55 @@ function useStore() {
 
   const hoursSet = days.length > 0;
   const openSet = !!(openHours.startTime && openHours.endTime);
+  const coordsSet =
+    latitude.trim() !== "" &&
+    longitude.trim() !== "" &&
+    Number.isFinite(Number(latitude)) &&
+    Number.isFinite(Number(longitude));
+  const locationSet = !!loc.trim() && coordsSet;
   const filledCount = [
     !!name.trim(),
     !!biz,
-    !!loc.trim(),
+    locationSet,
     hoursSet,
     openSet,
     !!(breakTime.startTime && breakTime.endTime),
     !!(dailyGoals.visitors || dailyGoals.revenue),
   ].filter(Boolean).length;
-  const valid = !!name.trim() && !!biz && !!loc.trim();
+  const valid = !!name.trim() && !!biz && locationSet;
 
-  const saveAndDone = () => {
+  const saveAndDone = async () => {
+    const payload = buildStorePayload({
+      storeName: name,
+      businessType: biz,
+      latitude,
+      longitude,
+    });
+    if (!payload) return;
+
+    setSaving(true);
+    setError("");
     localStorage.setItem("store_name", name);
     localStorage.setItem("store_address", loc);
     localStorage.setItem("store_biz_type", biz);
+    localStorage.setItem("store_latitude", latitude);
+    localStorage.setItem("store_longitude", longitude);
     localStorage.setItem("store_open_hours", JSON.stringify(openHours));
     localStorage.setItem("store_break_time", JSON.stringify(breakTime));
     localStorage.setItem("store_closed_days", JSON.stringify(days));
     localStorage.setItem("store_daily_goals", JSON.stringify(dailyGoals));
-    window.dispatchEvent(new Event("store-profile-updated"));
-    setDone(true);
+    try {
+      const savedStore = await saveStore(payload);
+      syncStoreProfile(savedStore);
+      setDone(true);
+    } catch {
+      window.dispatchEvent(new Event("store-profile-updated"));
+      setError(
+        "매장 정보를 서버에 저장하지 못했습니다. 잠시 후 다시 시도해주세요.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return {
@@ -70,6 +105,10 @@ function useStore() {
     setBiz,
     loc,
     setLoc,
+    latitude,
+    setLatitude,
+    longitude,
+    setLongitude,
     days,
     toggleDay,
     openHours,
@@ -80,9 +119,13 @@ function useStore() {
     setDailyGoals,
     done,
     setDone,
+    saving,
+    error,
     saveAndDone,
     hoursSet,
     openSet,
+    coordsSet,
+    locationSet,
     filledCount,
     valid,
   };
@@ -372,13 +415,16 @@ export default function OnboardingPage() {
               <BizSelect value={s.biz} onChange={s.setBiz} />
             </div>
             <label className="ob-field">
-              <FieldLabel req filled={!!s.loc.trim()}>
+              <FieldLabel req filled={s.locationSet}>
                 위치
               </FieldLabel>
-              <TextField
-                icon={<Ic.Pin />}
+              <AddressSearchInput
                 value={s.loc}
-                onChange={s.setLoc}
+                onChange={({ address, latitude, longitude }) => {
+                  s.setLoc(address);
+                  s.setLatitude(String(latitude));
+                  s.setLongitude(String(longitude));
+                }}
                 placeholder="도로명 주소를 입력하세요"
               />
             </label>
@@ -465,11 +511,18 @@ export default function OnboardingPage() {
           </div>
           <div className="ob-foot">
             <Progress count={s.filledCount} />
+            {s.error && (
+              <div className="ob-hint" style={{ color: "#EF4444" }}>
+                {s.error}
+              </div>
+            )}
             <button
-              className={"ob-submit accent" + (s.valid ? "" : " disabled")}
-              onClick={s.valid ? s.saveAndDone : undefined}
+              className={
+                "ob-submit accent" + (s.valid && !s.saving ? "" : " disabled")
+              }
+              onClick={s.valid && !s.saving ? s.saveAndDone : undefined}
             >
-              매장 등록 완료 <Ic.Arrow />
+              {s.saving ? "저장 중..." : "매장 등록 완료"} <Ic.Arrow />
             </button>
           </div>
         </div>

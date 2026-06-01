@@ -8,7 +8,6 @@ export default function ResponseWaitTimeCard({ startAt, endAt }) {
 
   useEffect(() => {
     if (!startAt || !endAt) return
-    setData(null)
     fetchResponseWaitTime(startAt, endAt).then(setData).catch(() => {})
   }, [startAt, endAt])
 

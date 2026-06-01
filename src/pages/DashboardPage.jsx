@@ -40,6 +40,20 @@ const TWEAK_DEFAULTS = {
   showPrivacyBadge: true,
 };
 
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getOneMonthBefore(day) {
+  const [year, month, date] = day.split("-").map(Number);
+  const lastDayOfPreviousMonth = new Date(year, month - 1, 0).getDate();
+  const clampedDate = Math.min(date, lastDayOfPreviousMonth);
+  return formatLocalDate(new Date(year, month - 2, clampedDate));
+}
+
 export default function DashboardPage() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
@@ -50,10 +64,8 @@ export default function DashboardPage() {
   const endAt = `${day}T23:59:59`;
 
   const trendStartAt = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 60);
-    d.setHours(0, 0, 0, 0);
-    return `${d.toISOString().slice(0, 10)}T00:00:00`;
+    const startDay = getOneMonthBefore(day);
+    return `${startDay}T00:00:00`;
   })();
 
   const dateLabel = new Date(day).toLocaleDateString("ko-KR", {
@@ -94,7 +106,7 @@ export default function DashboardPage() {
           {/* 운영 현황: 베스트메뉴 · 평균체류 · 최대응대대기 · 테이블유휴 · 그냥나간손님 */}
           <OperationalStatusCard startAt={startAt} endAt={endAt} />
 
-          {/* 60일 방문 추세 */}
+          {/* 방문자 그래프: 선택 날짜 기준 1개월 범위 */}
           <VisitTrendCard
             startAt={trendStartAt}
             endAt={endAt}
@@ -131,9 +143,9 @@ export default function DashboardPage() {
           </div>
 
           {/* 시간대별 혼잡도 · 성별 분포 */}
-          <div className="grid-2">
+          <div className="grid-2 hourly-congestion-row">
             <HourlyCongestionCard startAt={startAt} endAt={endAt} />
-            <GenderCard />
+            <GenderCard startAt={startAt} endAt={endAt} />
           </div>
 
           {/* 프리미엄 유도 배너 */}

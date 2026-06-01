@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import AppLayout from '../components/layout/AppLayout'
 import HamburgerButton from '../components/layout/HamburgerButton'
 import { Ic } from '../components/ui/Icons'
-import {
-  TweaksPanel, TweakSection, TweakColor, TweakSelect, TweakToggle,
-} from '../components/ui/TweaksPanel'
 import { useTweaks } from '../hooks/useTweaks'
-import { BizSelect, DayPicker, TimeRangeSelect } from '../components/store/StoreFormInputs'
+import { AddressSearchInput, BizSelect, DayPicker, TimeRangeSelect } from '../components/store/StoreFormInputs'
+import { deleteStore, fetchStore, saveStore } from '../api/index'
+import { buildStorePayload, clearStoreProfile, syncStoreProfile } from '../utils/storeProfile'
 
 const TWEAK_DEFAULTS = {
   accent: '#00A5BB',
@@ -14,49 +13,6 @@ const TWEAK_DEFAULTS = {
 }
 
 // ── internal helpers ────────────────────────────────────────────────
-
-function Toggle({ on, onChange }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      style={{
-        display: 'inline-flex', alignItems: 'center',
-        width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
-        background: on ? 'var(--accent)' : '#D1D5DB',
-        padding: 2, transition: 'background .2s', flexShrink: 0,
-      }}
-    >
-      <span style={{
-        width: 20, height: 20, borderRadius: '50%', background: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-        transform: on ? 'translateX(20px)' : 'translateX(0)',
-        transition: 'transform .2s',
-        display: 'block',
-      }}/>
-    </button>
-  )
-}
-
-function StatusDot({ status }) {
-  const map = {
-    ok:      { color: '#10B981', label: '정상' },
-    warning: { color: '#F59E0B', label: '경고' },
-    error:   { color: '#EF4444', label: '오류' },
-    idle:    { color: '#9AA3AF', label: '대기' },
-  }
-  const { color, label } = map[status] ?? map.idle
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-      <span style={{
-        width: 8, height: 8, borderRadius: '50%', background: color,
-        boxShadow: status === 'ok' ? `0 0 0 3px ${color}30` : 'none',
-      }}/>
-      <span style={{ fontSize: 12, color, fontWeight: 600 }}>{label}</span>
-    </span>
-  )
-}
 
 function SectionCard({ title, icon, children }) {
   return (
@@ -100,96 +56,10 @@ function TextInput({ defaultValue, placeholder }) {
   )
 }
 
-// ── abstract floor plan SVG (no CCTV, no cameras) ──────────────────
-
-function FloorPlan() {
-  return (
-    <svg viewBox="0 0 340 200" width="100%" style={{ display: 'block', maxWidth: 340 }}>
-      {/* room outline */}
-      <rect x="10" y="10" width="320" height="180" rx="8" fill="#F8F9FB" stroke="#D1D5DB" strokeWidth="1.5"/>
-
-      {/* furniture: tables */}
-      <rect x="40"  y="45"  width="50" height="30" rx="5" fill="#E5E9EF"/>
-      <rect x="40"  y="95"  width="50" height="30" rx="5" fill="#E5E9EF"/>
-      <rect x="40"  y="145" width="50" height="30" rx="5" fill="#E5E9EF"/>
-      <rect x="120" y="45"  width="50" height="30" rx="5" fill="#E5E9EF"/>
-      <rect x="120" y="95"  width="50" height="30" rx="5" fill="#E5E9EF"/>
-      <rect x="120" y="145" width="50" height="30" rx="5" fill="#E5E9EF"/>
-
-      {/* counter area */}
-      <rect x="220" y="25" width="90" height="50" rx="6" fill="#EEF2FF" stroke="#C7D2FE" strokeWidth="1"/>
-      <text x="265" y="55" textAnchor="middle" fontSize="10" fill="#6366F1" fontWeight="600">카운터</text>
-
-      {/* entrance zone overlay */}
-      <rect x="10" y="130" width="90" height="60" rx="6" fill="#3B7CF620" stroke="#3B7CF6" strokeWidth="1.5" strokeDasharray="4 3"/>
-      <text x="55" y="165" textAnchor="middle" fontSize="9" fill="#3B7CF6" fontWeight="700">입구 존</text>
-
-      {/* counter zone overlay */}
-      <rect x="210" y="15" width="110" height="70" rx="6" fill="#10B98120" stroke="#10B981" strokeWidth="1.5" strokeDasharray="4 3"/>
-      <text x="265" y="72" textAnchor="middle" fontSize="9" fill="#10B981" fontWeight="700">계산대 존</text>
-
-      {/* door */}
-      <rect x="10" y="150" width="14" height="3" fill="#fff"/>
-      <path d="M10 150 Q10 163 24 163" fill="none" stroke="#9AA3AF" strokeWidth="1.2"/>
-
-      {/* sensor dots (non-camera) */}
-      <circle cx="55"  cy="20" r="5" fill="#F59E0B"/>
-      <circle cx="265" cy="18" r="5" fill="#F59E0B"/>
-      <text x="55"  y="35" textAnchor="middle" fontSize="8" fill="#9AA3AF">센서A</text>
-      <text x="265" y="33" textAnchor="middle" fontSize="8" fill="#9AA3AF">센서B</text>
-    </svg>
-  )
-}
-
-// ── threshold slider ────────────────────────────────────────────────
-
-function ThresholdBar({ low, high, onChange }) {
-  return (
-    <div>
-      <div style={{ position: 'relative', height: 36, marginBottom: 8 }}>
-        <div style={{
-          position: 'absolute', top: '50%', left: 0, right: 0, height: 8,
-          borderRadius: 999, transform: 'translateY(-50%)',
-          background: `linear-gradient(to right, #10B981 0%, #10B981 ${(low/50)*100}%,
-            #F59E0B ${(low/50)*100}%, #F59E0B ${(high/50)*100}%,
-            #EF4444 ${(high/50)*100}%, #EF4444 100%)`,
-        }}/>
-        {/* low handle */}
-        <input type="range" min={0} max={50} value={low}
-          onChange={e => onChange(+e.target.value, high)}
-          style={{ position: 'absolute', top: '50%', left: 0, right: 0,
-            transform: 'translateY(-50%)', appearance: 'none', width: '100%',
-            background: 'transparent', pointerEvents: 'auto', zIndex: 2 }}/>
-        {/* high handle */}
-        <input type="range" min={0} max={50} value={high}
-          onChange={e => onChange(low, +e.target.value)}
-          style={{ position: 'absolute', top: '50%', left: 0, right: 0,
-            transform: 'translateY(-50%)', appearance: 'none', width: '100%',
-            background: 'transparent', pointerEvents: 'auto', zIndex: 3 }}/>
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[
-          { label: '낮음', range: `0–${low}명`, color: '#10B981', bg: '#D1FAE5' },
-          { label: '보통', range: `${low+1}–${high}명`, color: '#F59E0B', bg: '#FEF3C7' },
-          { label: '높음', range: `${high+1}명+`, color: '#EF4444', bg: '#FEE2E2' },
-        ].map(b => (
-          <div key={b.label} style={{
-            flex: 1, padding: '8px 10px', borderRadius: 8, background: b.bg,
-            display: 'flex', flexDirection: 'column', gap: 2,
-          }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: b.color }}>{b.label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: b.color }}>{b.range}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── main page ───────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS)
+  const [t] = useTweaks(TWEAK_DEFAULTS)
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', t.accent)
@@ -199,6 +69,8 @@ export default function SettingsPage() {
   const [storeName,    setStoreName]    = useState(() => localStorage.getItem('store_name')    ?? '한동대학교 명성')
   const [storeAddress, setStoreAddress] = useState(() => localStorage.getItem('store_address') ?? '한동대학교')
   const [bizType,      setBizType]      = useState(() => localStorage.getItem('store_biz_type') ?? '음식점')
+  const [latitude,     setLatitude]     = useState(() => localStorage.getItem('store_latitude') ?? '')
+  const [longitude,    setLongitude]    = useState(() => localStorage.getItem('store_longitude') ?? '')
   const [openHours,    setOpenHours]    = useState(() => {
     try { return JSON.parse(localStorage.getItem('store_open_hours')) ?? { startPeriod: '오전', startTime: '9:00', endPeriod: '오후', endTime: '10:00' } }
     catch { return { startPeriod: '오전', startTime: '9:00', endPeriod: '오후', endTime: '10:00' } }
@@ -215,44 +87,87 @@ export default function SettingsPage() {
     catch { return { visitors: '', revenue: '' } }
   })
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [storeError, setStoreError] = useState('')
 
-  // 혼잡도
-  const [threshLow, setThreshLow]   = useState(10)
-  const [threshHigh, setThreshHigh] = useState(25)
-
-  // 개인정보 toggles
-  const [noPersonalId,  setNoPersonalId]  = useState(true)
-  const [noFaceRecog,   setNoFaceRecog]   = useState(true)
-  const [anonOnly,      setAnonOnly]      = useState(true)
-  const [retention,     setRetention]     = useState('90일')
-
-  // 외부 데이터
-  const [weatherOn,     setWeatherOn]     = useState(true)
-  const [weatherTest,   setWeatherTest]   = useState('idle') // idle | testing | ok | error
-
-  // 알림
-  const [notifEmail,    setNotifEmail]    = useState(true)
-  const [notifPush,     setNotifPush]     = useState(false)
-
-  // 구역 설정
-  const [stayThresh,    setStayThresh]    = useState(30)
-  const [eventThresh,   setEventThresh]   = useState(5)
-
-  const handleWeatherTest = () => {
-    setWeatherTest('testing')
-    setTimeout(() => setWeatherTest('ok'), 1600)
-  }
+  useEffect(() => {
+    let active = true
+    fetchStore()
+      .then(store => {
+        if (!active) return
+        syncStoreProfile(store)
+        setStoreName(store.storeName ?? '')
+        setBizType(store.businessType ?? '')
+        setLatitude(store.latitude ?? '')
+        setLongitude(store.longitude ?? '')
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   const toggleDay = i => setClosedDays(prev =>
     prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i].sort()
   )
 
-  const SYS_ITEMS = [
-    { label: 'AI 처리 엔진',    status: 'ok',      value: 'v2.4.1' },
-    { label: '데이터 수집',     status: 'ok',      value: '실시간' },
-    { label: '마지막 동기화',   status: 'ok',      value: '2분 전' },
-    { label: '서버 연결',       status: 'ok',      value: '응답 12ms' },
-  ]
+  const handleSaveStore = async () => {
+    const payload = buildStorePayload({
+      storeName,
+      businessType: bizType,
+      latitude,
+      longitude,
+    })
+    if (!payload) {
+      setStoreError('매장명, 업종, 위도, 경도를 확인해주세요.')
+      return
+    }
+
+    setSaving(true)
+    setStoreError('')
+    localStorage.setItem('store_name',        storeName)
+    localStorage.setItem('store_address',     storeAddress)
+    localStorage.setItem('store_biz_type',    bizType)
+    localStorage.setItem('store_latitude',    latitude)
+    localStorage.setItem('store_longitude',   longitude)
+    localStorage.setItem('store_open_hours',  JSON.stringify(openHours))
+    localStorage.setItem('store_break_time',  JSON.stringify(breakTime))
+    localStorage.setItem('store_closed_days', JSON.stringify(closedDays))
+    localStorage.setItem('store_daily_goals', JSON.stringify(dailyGoals))
+
+    try {
+      const savedStore = await saveStore(payload)
+      syncStoreProfile(savedStore)
+      window.dispatchEvent(new Event('store-profile-updated'))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch {
+      setStoreError('매장 정보를 서버에 저장하지 못했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteStore = async () => {
+    if (!window.confirm('등록된 매장 정보를 삭제할까요?')) return
+    setSaving(true)
+    setStoreError('')
+    try {
+      await deleteStore()
+      clearStoreProfile()
+      setStoreName('')
+      setStoreAddress('')
+      setBizType('')
+      setLatitude('')
+      setLongitude('')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch {
+      setStoreError('매장 정보를 삭제하지 못했습니다.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <AppLayout>
@@ -279,8 +194,15 @@ export default function SettingsPage() {
               <BizSelect value={bizType} onChange={setBizType} />
             </FieldRow>
             <FieldRow label="주소">
-              <input type="text" value={storeAddress} onChange={e => setStoreAddress(e.target.value)} placeholder="주소 입력"
-                style={{ height: 36, padding: '0 12px', border: '1px solid #E5E9EF', borderRadius: 8, fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'inherit' }}/>
+              <AddressSearchInput
+                value={storeAddress}
+                onChange={({ address, latitude, longitude }) => {
+                  setStoreAddress(address)
+                  setLatitude(String(latitude))
+                  setLongitude(String(longitude))
+                }}
+                placeholder="주소 입력"
+              />
             </FieldRow>
             <FieldRow label="영업시간">
               <TimeRangeSelect value={openHours} onChange={setOpenHours} />
@@ -320,6 +242,11 @@ export default function SettingsPage() {
             </FieldRow>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+            {storeError && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#EF4444' }}>
+                {storeError}
+              </span>
+            )}
             {saved && (
               <span style={{
                 fontSize: 12, fontWeight: 600, color: '#10B981',
@@ -329,22 +256,16 @@ export default function SettingsPage() {
                 ✓ 저장되었습니다
               </span>
             )}
-            <button onClick={() => {
-              localStorage.setItem('store_name',        storeName)
-              localStorage.setItem('store_address',     storeAddress)
-              localStorage.setItem('store_biz_type',    bizType)
-              localStorage.setItem('store_open_hours',  JSON.stringify(openHours))
-              localStorage.setItem('store_break_time',  JSON.stringify(breakTime))
-              localStorage.setItem('store_closed_days', JSON.stringify(closedDays))
-              localStorage.setItem('store_daily_goals', JSON.stringify(dailyGoals))
-              window.dispatchEvent(new Event('store-profile-updated'))
-              setSaved(true)
-              setTimeout(() => setSaved(false), 2500)
-            }} style={{
+            <button onClick={handleDeleteStore} disabled={saving} style={{
+              height: 36, padding: '0 14px', borderRadius: 8, border: '1px solid #FCA5A5',
+              background: '#fff', color: '#DC2626', fontSize: 13, fontWeight: 600,
+              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+            }}>삭제</button>
+            <button onClick={handleSaveStore} disabled={saving} style={{
               height: 36, padding: '0 20px', borderRadius: 8, border: 'none',
               background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>저장</button>
+              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+            }}>{saving ? '저장 중...' : '저장'}</button>
           </div>
         </SectionCard>
 

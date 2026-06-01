@@ -1,8 +1,19 @@
 const BASE = import.meta.env.VITE_API_BASE_URL
+const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY
 
 async function post(path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`API ${res.status}`)
+  return res.json()
+}
+
+async function put(path, body) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PUT',
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
@@ -17,6 +28,11 @@ async function get(path, params) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
+}
+
+async function del(path) {
+  const res = await fetch(`${BASE}${path}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`API ${res.status}`)
 }
 
 // 영상
@@ -134,6 +150,40 @@ export async function fetchCoreCustomerV2(startAt, endAt) {
 
 export async function fetchAvgDwell(startAt, endAt) {
   return get('/api/v2/analytics/avg-dwell', { startAt, endAt })
+}
+
+export async function fetchGenderDistribution(startAt, endAt) {
+  return get('/api/v2/analytics/gender-distribution', { startAt, endAt })
+}
+
+export async function fetchStore() {
+  return get('/api/v1/store')
+}
+
+export async function saveStore(store) {
+  return put('/api/v1/store', store)
+}
+
+export async function deleteStore() {
+  return del('/api/v1/store')
+}
+
+export async function searchAddress(query) {
+  if (!KAKAO_REST_API_KEY || !query?.trim()) return []
+
+  const params = new URLSearchParams({ query: query.trim(), size: '5' })
+  const res = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?${params}`, {
+    headers: { Authorization: `KakaoAK ${KAKAO_REST_API_KEY}` },
+  })
+  if (!res.ok) throw new Error(`Kakao API ${res.status}`)
+  const data = await res.json()
+  return (data.documents ?? []).map(item => ({
+    id: item.address_name,
+    address: item.road_address?.address_name || item.address_name,
+    detail: item.road_address?.building_name || item.address?.region_3depth_name || '',
+    latitude: Number(item.y),
+    longitude: Number(item.x),
+  }))
 }
 
 // AI 챗봇

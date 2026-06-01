@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import '../../styles/onboarding.css'
 import { Ic } from '../ui/Icons'
+import { searchAddress } from '../../api/index'
 
 export const BIZ = [
   { v: '카페',       ic: <Ic.Coffee />,   Ic: Ic.Coffee },
@@ -65,6 +66,124 @@ export function BizSelect({ value, onChange }) {
               <span>{b.v}</span>
               {b.v === value && <span className="ocheck"><Ic.Check /></span>}
             </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function AddressSearchInput({ value, onChange, placeholder }) {
+  const [open, setOpen] = useState(false)
+  const [results, setResults] = useState([])
+  const [status, setStatus] = useState('idle')
+  const ref = useRef(null)
+  const hasKey = !!import.meta.env.VITE_KAKAO_REST_API_KEY
+
+  useEffect(() => {
+    if (!open) return
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  useEffect(() => {
+    if (!hasKey || value.trim().length < 2) return
+
+    let active = true
+    const timer = window.setTimeout(() => {
+      setStatus('loading')
+      searchAddress(value)
+        .then(items => {
+          if (!active) return
+          setResults(items)
+          setStatus(items.length ? 'ready' : 'empty')
+          setOpen(true)
+        })
+        .catch(() => {
+          if (!active) return
+          setResults([])
+          setStatus('error')
+          setOpen(true)
+        })
+    }, 250)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [hasKey, value])
+
+  const handleInput = (nextValue) => {
+    setResults([])
+    setStatus('idle')
+    onChange({ address: nextValue, latitude: '', longitude: '' })
+    setOpen(nextValue.trim().length >= 2)
+  }
+
+  const handleSelect = (item) => {
+    onChange({
+      address: item.address,
+      latitude: item.latitude,
+      longitude: item.longitude,
+    })
+    setOpen(false)
+  }
+
+  return (
+    <div className="ob-select" ref={ref} style={{ position: 'relative' }}>
+      <div className="ob-input-wrap">
+        <span className="ic"><Ic.Pin /></span>
+        <input
+          className="ob-input"
+          value={value}
+          placeholder={placeholder}
+          onFocus={() => {
+            if (value.trim().length >= 2) setOpen(true)
+          }}
+          onChange={(e) => handleInput(e.target.value)}
+        />
+      </div>
+      {open && (
+        <div className="ob-menu" style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}>
+          {!hasKey && (
+            <div className="ob-opt" style={{ color: 'var(--muted)' }}>
+              주소 검색 키가 설정되지 않았습니다.
+            </div>
+          )}
+          {hasKey && status === 'loading' && (
+            <div className="ob-opt" style={{ color: 'var(--muted)' }}>
+              주소를 검색하는 중입니다.
+            </div>
+          )}
+          {hasKey && status === 'empty' && (
+            <div className="ob-opt" style={{ color: 'var(--muted)' }}>
+              검색 결과가 없습니다.
+            </div>
+          )}
+          {hasKey && status === 'error' && (
+            <div className="ob-opt" style={{ color: 'var(--muted)' }}>
+              주소 검색에 실패했습니다.
+            </div>
+          )}
+          {results.map(item => (
+            <button
+              type="button"
+              key={`${item.address}-${item.longitude}-${item.latitude}`}
+              className="ob-opt"
+              onClick={() => handleSelect(item)}
+              style={{ width: '100%', textAlign: 'left' }}
+            >
+              <span className="oic"><Ic.Pin /></span>
+              <span>
+                <span style={{ display: 'block', fontWeight: 700 }}>{item.address}</span>
+                {item.detail && (
+                  <span style={{ display: 'block', marginTop: 2, fontSize: 11, color: 'var(--muted)' }}>
+                    {item.detail}
+                  </span>
+                )}
+              </span>
+            </button>
           ))}
         </div>
       )}
