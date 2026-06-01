@@ -133,7 +133,7 @@ export default function DashboardPage() {
           {/* 시간대별 혼잡도 · 성별 분포 */}
           <div className="grid-2">
             <HourlyCongestionCard startAt={startAt} endAt={endAt} />
-            <GenderCard day={day} />
+            <GenderCard />
           </div>
 
           {/* 프리미엄 유도 배너 */}

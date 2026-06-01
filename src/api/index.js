@@ -54,9 +54,6 @@ export async function fetchVideoStatus(id) {
 }
 
 // 통계 v1
-export async function fetchRawAnalytics(videoId) {
-  return get(`/api/v1/analytics/raw?videoId=${videoId}`)
-}
 
 export async function fetchHourlyPopulation(startAt, endAt) {
   return get('/api/v1/analytics/hourly-population', { startAt, endAt })
