@@ -1,26 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ic } from "../components/ui/Icons";
-import { uploadVideo, fetchVideoStatus, fetchRawAnalytics } from "../api/index";
-import { ceil1 } from "../utils/format";
+import { uploadVideo, fetchVideoStatus } from "../api/index";
 
-function congestionMeta(c) {
-  if (c === "low") return { text: "낮음", color: "oklch(0.42 0.12 155)", bg: "var(--good-soft)" };
-  if (c === "high") return { text: "높음", color: "oklch(0.45 0.16 25)", bg: "var(--bad-soft)" };
-  return { text: "보통", color: "oklch(0.55 0.14 65)", bg: "var(--warn-soft)" };
-}
-
-function formatDwell(sec) {
-  if (!sec) return "—";
-  if (sec < 60) return `${Math.round(sec)}초`;
-  return `${Math.floor(sec / 60)}분 ${Math.round(sec % 60)}초`;
-}
 
 export default function IntroPage() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState("idle"); // idle | uploading | analyzing | done | error
   const [drag, setDrag] = useState(false);
-  const [result, setResult] = useState(null);
   const inputRef = useRef();
 
   const process = useCallback(async (file) => {
@@ -40,8 +27,6 @@ export default function IntroPage() {
       });
 
       localStorage.setItem("last_video_id", id);
-      const data = await fetchRawAnalytics(id);
-      setResult(data);
       setPhase("done");
     } catch {
       setPhase("error");
@@ -58,14 +43,6 @@ export default function IntroPage() {
     setDrag(false);
     onFile(e.dataTransfer.files[0]);
   };
-
-  const persons = result?.persons ?? [];
-  const female = persons.filter((p) => p.gender === "female").length;
-  const male = persons.filter((p) => p.gender === "male").length;
-  const genderTotal = female + male;
-  const femalePct = genderTotal > 0 ? Number(((female / genderTotal) * 100).toFixed(1)) : 50.0;
-  const malePct = Number((100 - femalePct).toFixed(1));
-  const congestion = result ? congestionMeta(result.summary?.peakCongestion) : null;
 
   return (
     <div
@@ -177,7 +154,7 @@ export default function IntroPage() {
                   <div style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.42 0.12 155)" }}>분석 완료</div>
                   <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>오른쪽에서 결과를 확인하세요</div>
                 </div>
-                <button className="intro-btn" onClick={() => { setPhase("idle"); setResult(null); }}>
+                <button className="intro-btn" onClick={() => setPhase("idle")}>
                   새 영상 업로드
                 </button>
               </div>
@@ -233,52 +210,21 @@ export default function IntroPage() {
               </div>
             )}
 
-            {phase === "done" && result && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-
-                {/* KPI 3개 */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  <div style={{ background: "var(--accent-soft)", borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: "var(--accent-ink)", fontWeight: 500 }}>총 방문자</div>
-                    <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 5, color: "var(--accent-ink)", display: "flex", alignItems: "baseline", gap: 3 }}>
-                      {result.summary?.totalVisitors ?? 0}
-                      <span style={{ fontSize: 13, fontWeight: 500 }}>명</span>
-                    </div>
-                  </div>
-                  <div style={{ background: congestion.bg, borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: congestion.color, fontWeight: 500 }}>최대 혼잡도</div>
-                    <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 5, color: congestion.color }}>
-                      {congestion.text}
-                    </div>
-                  </div>
-                  <div style={{ background: "#F7F9FC", borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 500 }}>평균 체류</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.015em", marginTop: 5 }}>
-                      {formatDwell(result.summary?.avgDwellTimeSeconds)}
-                    </div>
+            {phase === "done" && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, height: "100%" }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--good-soft)", display: "grid", placeItems: "center" }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                    stroke="oklch(0.42 0.12 155)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "oklch(0.42 0.12 155)" }}>분석 완료</div>
+                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6, lineHeight: 1.6 }}>
+                    데이터가 대시보드에 반영됐습니다.<br/>대시보드에서 인사이트를 확인하세요.
                   </div>
                 </div>
-
-                {/* 성별 분포 */}
-                {genderTotal > 0 && (
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--ink-2)" }}>성별 분포</div>
-                    {[
-                      { label: "여성", pct: femalePct, color: "oklch(0.68 0.14 350)" },
-                      { label: "남성", pct: malePct, color: "var(--accent)" },
-                    ].map((g) => (
-                      <div key={g.label} style={{ display: "grid", gridTemplateColumns: "32px 1fr 40px", gap: 10, alignItems: "center", fontSize: 13, marginBottom: 10 }}>
-                        <div style={{ color: "var(--muted)" }}>{g.label}</div>
-                        <div style={{ height: 8, background: "#F1F3F6", borderRadius: 99, overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${g.pct}%`, background: g.color, borderRadius: 99, transition: "width .6s ease" }}/>
-                        </div>
-                        <div className="mono" style={{ fontWeight: 600, textAlign: "right" }}>{ceil1(g.pct)}%</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="priv">
+                <div className="priv" style={{ marginTop: 4 }}>
                   <Ic.Shield color="#9AA3AF"/>
                   Vision AI 익명 추정 통계입니다. 개인 식별 정보는 저장되지 않습니다.
                 </div>

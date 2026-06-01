@@ -1,44 +1,15 @@
-import { useState, useEffect } from 'react'
-import { fetchRawAnalytics } from '../../api/index'
 import Donut from '../ui/Donut'
 import { Ic } from '../ui/Icons'
 import InfoTooltip from '../ui/InfoTooltip'
 import { ceil1 } from '../../utils/format'
-
-function getSeedVideoId(day) {
-  const start = new Date('2026-04-24')
-  const current = new Date(day)
-  const diffDays = Math.floor((current - start) / (1000 * 60 * 60 * 24))
-  if (diffDays >= 0 && diffDays < 30) return diffDays + 1
-  return null
-}
 
 const FALLBACK_SLICES = [
   { label: '여성', pct: 58, color: 'oklch(0.7 0.13 0)' },
   { label: '남성', pct: 42, color: 'oklch(0.58 0.12 210)' },
 ]
 
-export default function GenderCard({ day }) {
-  const [raw, setRaw] = useState(null)
-
-  useEffect(() => {
-    if (!day) return
-    setRaw(null)
-    const videoId = getSeedVideoId(day) || localStorage.getItem('last_video_id')
-    if (!videoId) return
-    fetchRawAnalytics(videoId).then(setRaw).catch(() => {})
-  }, [day])
-
-  const slices = (() => {
-    const persons = raw?.persons
-    if (!persons || persons.length === 0) return FALLBACK_SLICES
-    const f = persons.filter((p) => p.gender === 'female').length
-    const fPct = Number(((f / persons.length) * 100).toFixed(1))
-    return [
-      { label: '여성', pct: fPct, color: 'oklch(0.7 0.13 0)' },
-      { label: '남성', pct: Number((100 - fPct).toFixed(1)), color: 'oklch(0.58 0.12 210)' },
-    ]
-  })()
+export default function GenderCard() {
+  const slices = FALLBACK_SLICES
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
