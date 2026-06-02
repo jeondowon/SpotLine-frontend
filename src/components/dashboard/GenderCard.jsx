@@ -3,20 +3,32 @@ import Donut from '../ui/Donut'
 import { Ic } from '../ui/Icons'
 import InfoTooltip from '../ui/InfoTooltip'
 import { ceil1 } from '../../utils/format'
-import { fetchGenderDistribution } from '../../api/index'
+import { fetchDailyVisits, fetchGenderDistribution } from '../../api/index'
 
 const FEMALE_COLOR = 'oklch(0.7 0.13 0)'
 const MALE_COLOR = 'oklch(0.58 0.12 210)'
 
 export default function GenderCard({ startAt, endAt }) {
   const [data, setData] = useState(null)
+  const [visitTotal, setVisitTotal] = useState(null)
 
   useEffect(() => {
     if (!startAt || !endAt) return
     let active = true
-    fetchGenderDistribution(startAt, endAt)
-      .then((nextData) => {
-        if (active) setData(nextData)
+    const day = startAt.slice(0, 10)
+
+    Promise.allSettled([
+      fetchGenderDistribution(startAt, endAt),
+      fetchDailyVisits(day),
+    ])
+      .then(([genderResult, visitsResult]) => {
+        if (!active) return
+        setData(genderResult.status === 'fulfilled' ? genderResult.value : null)
+        setVisitTotal(
+          visitsResult.status === 'fulfilled' && visitsResult.value?.totalVisits != null
+            ? Number(visitsResult.value.totalVisits)
+            : null
+        )
       })
       .catch(() => {})
     return () => {
@@ -50,7 +62,7 @@ export default function GenderCard({ startAt, endAt }) {
       >
         {total > 0 ? (
           <div className="donut-wrap gender-donut-wrap">
-            <Donut slices={slices} label="전체" size={140} />
+            <Donut slices={slices} label="전체" centerValue={visitTotal ?? total} size={140} />
             <div className="donut-legend">
               {slices.map((s) => (
                 <div className="row" key={s.label}>
