@@ -103,7 +103,7 @@ export default function HourlyCongestionChart({ data }) {
             : isPeak
             ? PEAK_COLOR
             : 'var(--accent)'
-          const radius = isNow || isPeak ? 5 : 3.4
+          const radius = isPeak ? 5 : 3.5
           const peakLabel = `피크 ${p.value}명`
           const peakLabelWidth = Math.max(60, peakLabel.length * 7.8)
           const peakLabelX = Math.min(
@@ -120,7 +120,7 @@ export default function HourlyCongestionChart({ data }) {
                 r={radius}
                 fill="#fff"
                 stroke={color}
-                strokeWidth={isNow || isPeak ? '2.6' : '2'}
+                strokeWidth={isPeak ? '2.6' : '2'}
               />
               {/* 피크 수치 표시 */}
               {isPeak && (
