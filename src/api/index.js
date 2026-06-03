@@ -36,6 +36,10 @@ async function del(path) {
 }
 
 // 영상
+export function fetchYoloStream(signal) {
+  return fetch(`${BASE}/api/v1/video/stream`, { signal })
+}
+
 export async function streamVideoChunk(blob, createdAt) {
   const formData = new FormData()
   formData.append('createdAt', createdAt)

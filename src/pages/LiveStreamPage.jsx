@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import AppLayout from '../components/layout/AppLayout'
 import HamburgerButton from '../components/layout/HamburgerButton'
 import { Ic } from '../components/ui/Icons'
-import { streamVideoChunk } from '../api'
+import { streamVideoChunk, fetchYoloStream } from '../api'
 
 export default function LiveStreamPage() {
   const videoRef = useRef(null)
@@ -10,10 +10,55 @@ export default function LiveStreamPage() {
   const recorderRef = useRef(null)
   const chunkStartRef = useRef(null)
 
+  const yoloVideoRef = useRef(null)
+  const yoloAbortRef = useRef(null)
+
   const [isStreaming, setIsStreaming] = useState(false)
   const [chunkCount, setChunkCount] = useState(0)
   const [sendError, setSendError] = useState(false)
   const [error, setError] = useState(null)
+
+  async function startYoloStream() {
+    const ms = new MediaSource()
+    const objectUrl = URL.createObjectURL(ms)
+    yoloVideoRef.current.src = objectUrl
+
+    const abort = new AbortController()
+    yoloAbortRef.current = abort
+
+    ms.addEventListener('sourceopen', async () => {
+      const mimeType = MediaSource.isTypeSupported('video/webm;codecs=vp8')
+        ? 'video/webm;codecs=vp8'
+        : 'video/webm'
+      const sb = ms.addSourceBuffer(mimeType)
+      const queue = []
+
+      sb.addEventListener('updateend', () => {
+        if (queue.length > 0 && !sb.updating) sb.appendBuffer(queue.shift())
+      })
+
+      try {
+        const res = await fetchYoloStream(abort.signal)
+        const reader = res.body.getReader()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (sb.updating || queue.length > 0) queue.push(value)
+          else sb.appendBuffer(value)
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') console.error('YOLO stream error', e)
+      } finally {
+        URL.revokeObjectURL(objectUrl)
+      }
+    })
+  }
+
+  function stopYoloStream() {
+    yoloAbortRef.current?.abort()
+    yoloAbortRef.current = null
+    if (yoloVideoRef.current) yoloVideoRef.current.src = ''
+  }
 
   async function startStream() {
     try {
@@ -45,6 +90,7 @@ export default function LiveStreamPage() {
 
       recorder.start(1500)
       setIsStreaming(true)
+      startYoloStream()
     } catch {
       setError('카메라 접근 권한이 필요합니다. 브라우저 설정에서 카메라를 허용해주세요.')
     }
@@ -56,12 +102,14 @@ export default function LiveStreamPage() {
     recorderRef.current = null
     streamRef.current = null
     if (videoRef.current) videoRef.current.srcObject = null
+    stopYoloStream()
     setIsStreaming(false)
   }
 
   useEffect(() => () => {
     recorderRef.current?.stop()
     streamRef.current?.getTracks().forEach(t => t.stop())
+    stopYoloStream()
   }, [])
 
   return (
@@ -83,32 +131,61 @@ export default function LiveStreamPage() {
         </div>
 
         <div className="content">
-          <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="card-h">
-              <Ic.Camera />
-              <h3>카메라 피드</h3>
-              {isStreaming && (
-                <div className="right" style={{ marginLeft: 'auto' }}>
-                  <span className="chip dot" style={sendError ? { background: 'var(--bad-soft)', color: 'oklch(0.45 0.16 25)', borderColor: 'oklch(0.88 0.08 25)' } : {}}>
-                    {sendError ? '전송 실패' : '백엔드 전송 중'}
-                  </span>
-                </div>
-              )}
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div className="card" style={{ flex: 1, overflow: 'hidden' }}>
+              <div className="card-h">
+                <Ic.Camera />
+                <h3>카메라 피드</h3>
+                {isStreaming && (
+                  <div className="right" style={{ marginLeft: 'auto' }}>
+                    <span className="chip dot" style={sendError ? { background: 'var(--bad-soft)', color: 'oklch(0.45 0.16 25)', borderColor: 'oklch(0.88 0.08 25)' } : {}}>
+                      {sendError ? '전송 실패' : '백엔드 전송 중'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div style={{ background: '#0F1419', minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{ width: '100%', maxHeight: 360, display: isStreaming ? 'block' : 'none', objectFit: 'cover' }}
+                />
+                {!isStreaming && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#fff' }}>
+                    <Ic.Camera style={{ width: 44, height: 44, opacity: 0.25 }} />
+                    <span style={{ fontSize: 13, opacity: 0.4 }}>스트리밍 시작 버튼을 눌러주세요</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ background: '#0F1419', minHeight: 420, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: '100%', maxHeight: 480, display: isStreaming ? 'block' : 'none', objectFit: 'cover' }}
-              />
-              {!isStreaming && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#fff' }}>
-                  <Ic.Camera style={{ width: 44, height: 44, opacity: 0.25 }} />
-                  <span style={{ fontSize: 13, opacity: 0.4 }}>스트리밍 시작 버튼을 눌러주세요</span>
-                </div>
-              )}
+
+            <div className="card" style={{ flex: 1, overflow: 'hidden' }}>
+              <div className="card-h">
+                <Ic.Camera />
+                <h3>YOLO 분석 영상</h3>
+                {isStreaming && (
+                  <div className="right" style={{ marginLeft: 'auto' }}>
+                    <span className="chip dot">분석 중</span>
+                  </div>
+                )}
+              </div>
+              <div style={{ background: '#0F1419', minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <video
+                  ref={yoloVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{ width: '100%', maxHeight: 360, display: isStreaming ? 'block' : 'none', objectFit: 'cover' }}
+                />
+                {!isStreaming && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#fff' }}>
+                    <Ic.Camera style={{ width: 44, height: 44, opacity: 0.25 }} />
+                    <span style={{ fontSize: 13, opacity: 0.4 }}>스트리밍 시작 시 YOLO 분석 영상이 표시됩니다</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
