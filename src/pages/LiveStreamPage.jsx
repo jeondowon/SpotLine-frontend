@@ -4,11 +4,15 @@ import HamburgerButton from '../components/layout/HamburgerButton'
 import { Ic } from '../components/ui/Icons'
 import { streamVideoChunk, fetchYoloStream } from '../api'
 
+// 업로드 클립 길이(ms). 각 구간을 timeslice 조각이 아니라 독립적으로 디코딩 가능한
+// 완결 파일로 녹화하기 위해 매 구간마다 MediaRecorder를 stop/start 한다.
+const CHUNK_MS = 1500
+
 export default function LiveStreamPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const recorderRef = useRef(null)
-  const chunkStartRef = useRef(null)
+  const mimeTypeRef = useRef('video/webm')
 
   const yoloVideoRef = useRef(null)
   const yoloAbortRef = useRef(null)
@@ -60,6 +64,40 @@ export default function LiveStreamPage() {
     if (yoloVideoRef.current) yoloVideoRef.current.src = ''
   }
 
+  // 한 구간을 완결된 클립으로 녹화 → 업로드 → 다음 구간 녹화 시작.
+  // stop() 시 생성되는 파일은 자체 헤더(moov)와 시작 키프레임을 포함하므로
+  // 서버에서 단독으로 디코딩된다. (timeslice 조각은 첫 조각 외엔 헤더가 없어 디코딩 불가)
+  function recordNextChunk() {
+    const stream = streamRef.current
+    if (!stream) return
+
+    const recorder = new MediaRecorder(stream, { mimeType: mimeTypeRef.current })
+    recorderRef.current = recorder
+    const parts = []
+    const createdAt = new Date().toISOString()
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) parts.push(e.data)
+    }
+
+    recorder.onstop = () => {
+      // 프레임 공백을 최소화하기 위해 다음 클립을 즉시 시작
+      if (streamRef.current) recordNextChunk()
+
+      if (parts.length === 0) return
+      const blob = new Blob(parts, { type: mimeTypeRef.current })
+      setChunkCount(c => c + 1)
+      streamVideoChunk(blob, createdAt)
+        .then(() => setSendError(false))
+        .catch(() => setSendError(true))
+    }
+
+    recorder.start() // timeslice 미사용 — stop() 시 완결된 단일 파일 생성
+    setTimeout(() => {
+      if (recorder.state !== 'inactive') recorder.stop()
+    }, CHUNK_MS)
+  }
+
   async function startStream() {
     try {
       setError(null)
@@ -67,29 +105,14 @@ export default function LiveStreamPage() {
       streamRef.current = stream
       videoRef.current.srcObject = stream
 
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-        ? 'video/webm;codecs=vp8'
-        : 'video/webm'
-      const recorder = new MediaRecorder(stream, { mimeType })
-      recorderRef.current = recorder
+      mimeTypeRef.current = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')
+        ? 'video/mp4;codecs=avc1'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+          ? 'video/webm;codecs=vp8'
+          : 'video/webm'
 
-      chunkStartRef.current = new Date()
-
-      recorder.ondataavailable = async (e) => {
-        if (e.data.size === 0) return
-        const createdAt = chunkStartRef.current.toISOString()
-        chunkStartRef.current = new Date()
-        setChunkCount(c => c + 1)
-        try {
-          await streamVideoChunk(e.data, createdAt)
-          setSendError(false)
-        } catch {
-          setSendError(true)
-        }
-      }
-
-      recorder.start(1500)
       setIsStreaming(true)
+      recordNextChunk()
       startYoloStream()
     } catch {
       setError('카메라 접근 권한이 필요합니다. 브라우저 설정에서 카메라를 허용해주세요.')
@@ -97,18 +120,21 @@ export default function LiveStreamPage() {
   }
 
   function stopStream() {
-    recorderRef.current?.stop()
-    streamRef.current?.getTracks().forEach(t => t.stop())
+    const stream = streamRef.current
+    const recorder = recorderRef.current
     recorderRef.current = null
-    streamRef.current = null
+    streamRef.current = null // onstop에서 streamRef가 null이라 다음 클립이 녹화되지 않음
+    if (recorder && recorder.state !== 'inactive') recorder.stop() // 마지막 클립 flush + 업로드
+    stream?.getTracks().forEach(t => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
     stopYoloStream()
     setIsStreaming(false)
   }
 
   useEffect(() => () => {
-    recorderRef.current?.stop()
     streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    recorderRef.current?.stop()
     stopYoloStream()
   }, [])
 

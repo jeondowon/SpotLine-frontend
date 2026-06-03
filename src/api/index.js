@@ -43,7 +43,7 @@ export function fetchYoloStream(signal) {
 export async function streamVideoChunk(blob, createdAt) {
   const formData = new FormData()
   formData.append('createdAt', createdAt)
-  formData.append('fileChunk', blob)
+  formData.append('fileChunk', blob, blob.type.includes('mp4') ? 'chunk.mp4' : 'chunk.webm')
   const res = await fetch(`${BASE}/api/v1/video/stream`, {
     method: 'POST',
     body: formData,
