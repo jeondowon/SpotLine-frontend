@@ -2,10 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import AppLayout from "../components/layout/AppLayout";
 import HamburgerButton from "../components/layout/HamburgerButton";
 import { Ic } from "../components/ui/Icons";
+import { sendVertexChat } from "../api";
 import "../styles/chat.css";
-
-const OLLAMA_URL = import.meta.env.VITE_OLLAMA_URL ?? "/ollama/api/chat";
-const MODEL = "gemma4:e4b-it-q4_K_M";
 
 const SYSTEM_PROMPT = `당신은 SpotLine의 매장 분석 전문 컨설턴트입니다. 절대로 자신을 AI나 인공지능이라고 밝히지 마세요. 당신은 10년 이상 리테일 데이터 분석 경력을 가진 실무 전문가처럼 대화하세요.
 
@@ -65,6 +63,20 @@ function formatTime(date) {
   });
 }
 
+function toVertexMessages(history, nextUserContent) {
+  return [
+    { role: "user", content: SYSTEM_PROMPT },
+    { role: "model", content: "알겠습니다. SpotLine 매장 분석 컨설턴트로 답변하겠습니다." },
+    ...history
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        content: m.content,
+      })),
+    { role: "user", content: nextUserContent },
+  ];
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -102,28 +114,6 @@ export default function ChatPage() {
     }
   }, [input]);
 
-  // Health check
-  useEffect(() => {
-    let cancelled = false;
-    async function check() {
-      try {
-        const res = await fetch(OLLAMA_URL.replace("/api/chat", "/api/tags"), {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-        if (!cancelled) setIsOnline(res.ok);
-      } catch {
-        if (!cancelled) setIsOnline(false);
-      }
-    }
-    check();
-    const iv = setInterval(check, 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(iv);
-    };
-  }, []);
-
   const sendMessage = async (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || isLoading) return;
@@ -138,42 +128,25 @@ export default function ChatPage() {
     setInput("");
     setIsLoading(true);
 
-    // Build the messages array for Ollama
-    const ollamaMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content: trimmed },
-    ];
+    const vertexMessages = toVertexMessages(messages, trimmed);
 
     try {
-      const res = await fetch(OLLAMA_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: ollamaMessages,
-          stream: false,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`API ${res.status}`);
-
-      const data = await res.json();
+      const data = await sendVertexChat(vertexMessages);
       const botMsg = {
         role: "assistant",
-        content: data.message?.content || "응답을 생성하지 못했습니다.",
+        content: data.message || "응답을 생성하지 못했습니다.",
         time: new Date(),
       };
 
       setMessages((prev) => [...prev, botMsg]);
       setIsOnline(true);
     } catch (err) {
-      console.error("Ollama API error:", err);
+      console.error("Vertex chat API error:", err);
       setMessages((prev) => [
         ...prev,
         {
           role: "error",
-          content: `서버 연결에 실패했습니다. 올라마 서버가 실행 중인지 확인해주세요.\n(${err.message})`,
+          content: `서버 연결에 실패했습니다. Vertex AI 채팅 API 상태를 확인해주세요.\n(${err.message})`,
           time: new Date(),
         },
       ]);
@@ -202,7 +175,7 @@ export default function ChatPage() {
           <div className="hdr-right">
             <div className="chat-context-badge">
               <Ic.Bot />
-              <span>gemma 4</span>
+              <span>Vertex AI</span>
             </div>
             <div
               style={{
@@ -323,7 +296,7 @@ export default function ChatPage() {
                     style={{ display: "flex", flexDirection: "column", gap: 4 }}
                   >
                     <div className="chat-thinking-label">
-                      gemma4 is thinking...
+                      Vertex AI is thinking...
                     </div>
                     <div key={tipIndex} className="chat-tip">
                       {TIPS[tipIndex]}
@@ -361,7 +334,7 @@ export default function ChatPage() {
                 className={"chat-status-dot" + (isOnline ? "" : " offline")}
               />
               <span>
-                {isOnline ? "Ollama 서버 연결됨" : "서버 연결 확인 중..."}
+                {isOnline ? "Vertex AI 채팅 API 연결됨" : "서버 연결 확인 중..."}
               </span>
             </div>
           </div>
