@@ -56,9 +56,12 @@ export default function LiveStreamPage() {
   }, [])
 
   useEffect(() => {
-    pollVision()
+    const firstPollId = setTimeout(pollVision, 0)
     const id = setInterval(pollVision, POLL_MS)
-    return () => clearInterval(id)
+    return () => {
+      clearTimeout(firstPollId)
+      clearInterval(id)
+    }
   }, [pollVision])
 
   const refreshYoloVideo = useCallback((delay = 0) => {
