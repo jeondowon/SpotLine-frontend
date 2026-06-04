@@ -197,6 +197,21 @@ export async function searchAddress(query) {
 }
 
 // AI 챗봇
+export async function sendVertexChat(messages) {
+  return post('/api/v1/chat', { messages })
+}
+
 export async function sendChatMessage(message, videoId, context) {
-  return post('/api/v1/ai/chat', { message, videoId, context })
+  const contextLines = [
+    videoId ? `videoId: ${videoId}` : null,
+    context?.summary ? `요약: ${context.summary}` : null,
+    context?.briefing ? `브리핑: ${context.briefing}` : null,
+    context?.marketing ? `마케팅 추천: ${context.marketing}` : null,
+  ].filter(Boolean)
+
+  const content = contextLines.length > 0
+    ? `${contextLines.join('\n')}\n\n질문: ${message}`
+    : message
+
+  return sendVertexChat([{ role: 'user', content }])
 }
