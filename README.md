@@ -1,5 +1,7 @@
 # SpotLine
 
+![SpotLine](src/assets/images/SpotLine.png)
+
 Vision AI로 오프라인 매장의 고객 행동을 비식별 데이터로 분석하고, 매출 향상을 위한 운영 전략을 제안하는 AI 매장 분석 플랫폼.
 
 ## 기술 스택
