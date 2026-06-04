@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL
+const BASE = import.meta.env.VITE_API_BASE_URL || 'https://spotline.seohamin.com'
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY
 
 async function post(path, body) {
@@ -36,8 +36,9 @@ async function del(path) {
 }
 
 // 영상
-export function fetchYoloStream(signal) {
-  return fetch(`${BASE}/api/v1/video/stream`, { signal })
+// 비전서버가 처리한 영상(video/mp4 청크 스트림)을 <video> src로 직접 재생한다.
+export function yoloStreamUrl() {
+  return `${BASE}/api/v1/video/stream`
 }
 
 export async function streamVideoChunk(blob, createdAt) {
@@ -109,6 +110,11 @@ export async function fetchMarketingRecommendations() {
 
 export async function fetchDailyVisits(date) {
   return get('/api/v1/analytics/visits/daily', { date })
+}
+
+// 비전 실시간 데이터
+export async function fetchLatestVisionData() {
+  return get('/api/v2/vision/data/latest')
 }
 
 // 통계 v2
