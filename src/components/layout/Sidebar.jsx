@@ -1,32 +1,48 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Ic } from '../ui/Icons'
+import { Link, useLocation } from "react-router-dom";
+import { Ic } from "../ui/Icons";
+import spotlineLogo from "../../assets/images/SpotLine_Logo.png";
+
 
 const NAV_ITEMS = [
-  { id: "intro",     label: "소개",     ic: <Ic.Spark/>, to: "/intro",      badge: "DEMO" },
-  { id: "dashboard", label: "대시보드", ic: <Ic.Dash/>,  to: "/dashboard" },
-  { id: "chat",      label: "AI 챗봇",  ic: <Ic.Chat/>,  to: "/chat",       badge: "AI" },
-]
+  {
+    id: "live",
+    label: "라이브 분석",
+    ic: <Ic.Camera />,
+    to: "/live",
+    badge: "LIVE",
+  },
+  { id: "dashboard", label: "대시보드", ic: <Ic.Dash />, to: "/dashboard" },
+  { id: "chat", label: "AI 챗봇", ic: <Ic.Chat />, to: "/chat", badge: "AI" },
+];
 
 const BOTTOM_ITEMS = [
-  { id: "settings", label: "설정", ic: <Ic.Gear/>, to: "/settings" },
-]
+  { id: "settings", label: "설정", ic: <Ic.Gear />, to: "/settings" },
+];
 
-export default function Sidebar() {
-  const { pathname } = useLocation()
+export default function Sidebar({ isOpen, onClose }) {
+  const { pathname } = useLocation();
 
-  const isActive = id => {
-    if (id === "intro")     return pathname === "/intro" || pathname === "/"
-    if (id === "dashboard") return pathname === "/dashboard"
-    if (id === "analytics") return pathname === "/analytics"
-    if (id === "settings")  return pathname === "/settings"
-    if (id === "chat")      return pathname === "/chat"
-    return false
-  }
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
 
   return (
-    <aside className="sb">
-      <Link to="/intro" className="sb-brand" style={{textDecoration:"none", color:"inherit"}}>
-        <div className="sb-mark" aria-hidden="true"></div>
+    <aside className={"sb" + (isOpen ? " sb--open" : "")}>
+      <div className="sb-toprow">
+        <button className="sb-close-btn" onClick={onClose}>
+          <Ic.Close />
+        </button>
+      </div>
+      <Link
+        to="/intro"
+        className="sb-brand"
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
+        <img
+          src={spotlineLogo}
+          alt="SpotLine"
+          style={{ width: 40, height: 40, objectFit: "contain" }}
+        />
         <div>
           <div className="sb-name">Spotline</div>
           <div className="sb-sub">매장 인사이트</div>
@@ -36,37 +52,36 @@ export default function Sidebar() {
       <div>
         <div className="sb-section-label">메뉴</div>
         <nav className="sb-nav">
-          {NAV_ITEMS.map(item => {
-            const active = isActive(item.id)
-            const inner = (
-              <>
-                {item.ic}
-                <span>{item.label}</span>
-                {item.badge && <span className="badge">{item.badge}</span>}
-              </>
-            )
-            return (
-              <Link key={item.id} to={item.to}
-                    className={"sb-item" + (active ? " active" : "")}
-                    style={{textDecoration: "none"}}>
-                {inner}
-              </Link>
-            )
-          })}
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.id}
+              to={item.to}
+              className={"sb-item" + (pathname === item.to ? " active" : "")}
+              style={{ textDecoration: "none" }}
+              onClick={handleNavClick}
+            >
+              {item.ic}
+              <span>{item.label}</span>
+              {item.badge && <span className="badge">{item.badge}</span>}
+            </Link>
+          ))}
         </nav>
       </div>
 
-      <nav className="sb-nav" style={{ marginTop: 'auto' }}>
-        {BOTTOM_ITEMS.map(item => (
-          <Link key={item.id} to={item.to}
-                className={"sb-item" + (isActive(item.id) ? " active" : "")}
-                style={{textDecoration: "none"}}>
+      <nav className="sb-nav" style={{ marginTop: "auto" }}>
+        {BOTTOM_ITEMS.map((item) => (
+          <Link
+            key={item.id}
+            to={item.to}
+            className={"sb-item" + (pathname === item.to ? " active" : "")}
+            style={{ textDecoration: "none" }}
+            onClick={handleNavClick}
+          >
             {item.ic}
             <span>{item.label}</span>
           </Link>
         ))}
       </nav>
-
     </aside>
-  )
+  );
 }

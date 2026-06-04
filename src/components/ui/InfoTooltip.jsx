@@ -3,31 +3,47 @@ import { Ic } from './Icons';
 
 export default function InfoTooltip({ text }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+  const boxRef = useRef(null);
+  const displayText = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e) {
-      if (!ref.current?.contains(e.target)) setOpen(false);
+      if (!btnRef.current?.contains(e.target) && !boxRef.current?.contains(e.target)) setOpen(false);
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(o => !o);
+  }
+
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'flex' }}>
+    <>
       <span
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={handleToggle}
         style={{ cursor: 'pointer', display: 'flex', color: open ? 'var(--ink-2)' : 'var(--muted-2)' }}
       >
         <Ic.Info />
       </span>
       {open && (
         <div
+          ref={boxRef}
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
+            position: 'fixed',
+            top: coords.top,
+            right: coords.right,
             width: 240,
             background: '#fff',
             border: '1px solid var(--line)',
@@ -37,13 +53,13 @@ export default function InfoTooltip({ text }) {
             lineHeight: 1.7,
             color: 'var(--ink-2)',
             boxShadow: '0 4px 20px rgba(0,0,0,0.09)',
-            zIndex: 100,
+            zIndex: 1000,
             whiteSpace: 'pre-wrap',
           }}
         >
-          {text}
+          {displayText}
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,5 +1,7 @@
-export default function Donut({ slices, size = 130, label = "" }) {
+export default function Donut({ slices, size = 130, label = "", centerValue }) {
   const sw = 22, r = (size - sw) / 2, c = 2 * Math.PI * r
+  const value = centerValue ?? slices.reduce((s, x) => s + (x.count || 0), 0)
+  const displayValue = Number.isFinite(Number(value)) ? Number(value).toLocaleString() : value
   let offset = 0
   const arcs = slices.map((s) => {
     const len = (s.pct / 100) * c
@@ -18,9 +20,9 @@ export default function Donut({ slices, size = 130, label = "" }) {
       ))}
       {label && (
         <g>
-          <text x={size / 2} y={size / 2 - 2} fontSize="11" textAnchor="middle" fill="#9AA3AF">{label}</text>
-          <text x={size / 2} y={size / 2 + 16} fontSize="18" fontWeight="700" textAnchor="middle" fill="#0F1419" fontFamily="JetBrains Mono">
-            {slices.reduce((s, x) => s + (x.count || 0), 0).toLocaleString()}
+          <text x={size / 2} y={size / 2 - 7} fontSize="11" textAnchor="middle" fill="#9AA3AF">{label}</text>
+          <text x={size / 2} y={size / 2 + 11} fontSize="18" fontWeight="700" textAnchor="middle" fill="#0F1419" fontFamily="JetBrains Mono">
+            {displayValue}명
           </text>
         </g>
       )}

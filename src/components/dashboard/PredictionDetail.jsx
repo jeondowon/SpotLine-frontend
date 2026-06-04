@@ -1,19 +1,14 @@
-import InfoTooltip from '../ui/InfoTooltip';
+import { useState, useEffect } from "react";
+import {
+  fetchTomorrowPrediction,
+  fetchNextWeekPrediction,
+} from "../../api/index";
+import InfoTooltip from "../ui/InfoTooltip";
 
 const DOW_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function todayDow() {
   return (new Date().getDay() + 6) % 7;
-}
-
-function parseNextWeek(nextWeek) {
-  return (nextWeek?.result ?? []).map((v) =>
-    typeof v === "object" ? (v?.expectedVisits ?? 0) : (v ?? 0)
-  );
-}
-
-function parseTomorrow(tomorrow) {
-  return tomorrow?.expectedVisits ?? null;
 }
 
 function StatBlock({ label, value, unit, sub, accent }) {
@@ -51,74 +46,93 @@ function StatBlock({ label, value, unit, sub, accent }) {
   );
 }
 
-export default function PredictionDetail({ tomorrow, nextWeek, compact = false }) {
-  const tomorrowVal = parseTomorrow(tomorrow);
-  const arr = parseNextWeek(nextWeek);
+export default function PredictionDetail() {
+  const [tomorrow, setTomorrow] = useState(null);
+  const [nextWeek, setNextWeek] = useState(null);
+
+  useEffect(() => {
+    fetchTomorrowPrediction()
+      .then(setTomorrow)
+      .catch(() => {});
+    fetchNextWeekPrediction()
+      .then(setNextWeek)
+      .catch(() => {});
+  }, []);
+
+  const tomorrowVal = tomorrow?.expectedVisits ?? null;
+  const arr = (nextWeek?.result ?? []).map((v) =>
+    typeof v === "object" ? (v?.expectedVisits ?? 0) : (v ?? 0),
+  );
+
   const dow = todayDow();
   const tomorrowDow = (dow + 1) % 7;
-
   const hasData = arr.some((v) => v > 0);
   const maxVal = Math.max(...arr, 1);
   const weekTotal = arr.reduce((s, v) => s + v, 0);
   const peakDow = arr.reduce((best, v, i) => (v > arr[best] ? i : best), 0);
   const troughDow = arr.reduce(
     (low, v, i) => (v > 0 && v < arr[low] ? i : low),
-    arr.findIndex((v) => v > 0)
+    arr.findIndex((v) => v > 0),
   );
 
   return (
     <div className="card">
       <div className="card-h">
-        <h3>단기 방문 예측 상세</h3>
+        <h3>단기 방문 예측</h3>
         <div className="right">
-          <InfoTooltip text={'내일과 다음 주 7일의 방문자 수를 예측해요.\n\n최근 방문 트렌드와 날씨 예보, 요일 패턴을 모두 반영해서 계산해요. 인력 배치나 재고 준비에 활용해보세요.'} />
+          <InfoTooltip
+            text={
+              "내일과 다음 주 7일의 방문자 수를 예측해요. \n\n최근 방문 트렌드와 날씨 예보, 요일 패턴을 모두 반영해서 계산해요."
+            }
+          />
         </div>
       </div>
 
-      <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-        {/* 상단 3개 수치 */}
-        {!compact && (
+      <div
+        className="card-b"
+        style={{ display: "flex", flexDirection: "column", gap: 22 }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
+            gap: 0,
+            border: "1px solid var(--line)",
+            borderRadius: 11,
+            overflow: "hidden",
+          }}
+        >
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1px 1fr 1px 1fr",
-              gap: 0,
-              border: "1px solid var(--line)",
-              borderRadius: 11,
-              overflow: "hidden",
-            }}
+            style={{ padding: "14px 18px", background: "var(--accent-soft)" }}
           >
-            <div style={{ padding: "14px 18px", background: "var(--accent-soft)" }}>
-              <StatBlock
-                label="내일 예측"
-                value={tomorrowVal ?? "—"}
-                unit={tomorrowVal != null ? "명" : ""}
-                sub={`다음 ${DOW_LABELS[tomorrowDow]}요일`}
-                accent
-              />
-            </div>
-            <div style={{ background: "var(--line)" }} />
-            <div style={{ padding: "14px 18px" }}>
-              <StatBlock
-                label="다음 주 최고"
-                value={hasData ? arr[peakDow] : "—"}
-                unit={hasData ? "명" : ""}
-                sub={hasData ? `${DOW_LABELS[peakDow]}요일` : ""}
-              />
-            </div>
-            <div style={{ background: "var(--line)" }} />
-            <div style={{ padding: "14px 18px" }}>
-              <StatBlock
-                label="주간 합계"
-                value={hasData ? weekTotal : "—"}
-                unit={hasData ? "명" : ""}
-                sub={hasData ? "다음 주 7일" : ""}
-              />
-            </div>
+            <StatBlock
+              label="내일 예측"
+              value={tomorrowVal ?? "—"}
+              unit={tomorrowVal != null ? "명" : ""}
+              sub={`다음 ${DOW_LABELS[tomorrowDow]}요일`}
+              accent
+            />
           </div>
-        )}
+          <div style={{ background: "var(--line)" }} />
+          <div style={{ padding: "14px 18px" }}>
+            <StatBlock
+              label="다음 주 최고"
+              value={hasData ? arr[peakDow] : "—"}
+              unit={hasData ? "명" : ""}
+              sub={hasData ? `${DOW_LABELS[peakDow]}요일` : ""}
+            />
+          </div>
+          <div style={{ background: "var(--line)" }} />
+          <div style={{ padding: "14px 18px" }}>
+            <StatBlock
+              label="주간 합계"
+              value={hasData ? weekTotal : "—"}
+              unit={hasData ? "명" : ""}
+              sub={hasData ? "다음 주 7일" : ""}
+            />
+          </div>
+        </div>
 
-        {/* 7일 바 차트 */}
         {hasData ? (
           <div>
             <div
@@ -127,20 +141,21 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
                 gridTemplateColumns: "repeat(7, 1fr)",
                 gap: 6,
                 alignItems: "flex-end",
-                height: compact ? 80 : 120,
+                height: 80,
               }}
             >
               {arr.map((v, i) => {
+                const isTomorrow = i === tomorrowDow;
                 const isPeak = i === peakDow;
                 const isTrough = i === troughDow && arr.length > 1;
-                const isTomorrow = i === tomorrowDow;
                 const barH = Math.max((v / maxVal) * 100, 4);
-
-                let barColor = "#E3E6EC";
-                if (isTomorrow) barColor = "var(--accent)";
-                else if (isPeak) barColor = "oklch(0.66 0.13 155)";
-                else if (isTrough) barColor = "oklch(0.70 0.14 25)";
-
+                const barColor = isTomorrow
+                  ? "var(--accent)"
+                  : isPeak
+                    ? "oklch(0.66 0.13 155)"
+                    : isTrough
+                      ? "oklch(0.70 0.14 25)"
+                      : "#E3E6EC";
                 return (
                   <div
                     key={i}
@@ -161,10 +176,10 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
                         color: isTomorrow
                           ? "var(--accent-ink)"
                           : isPeak
-                          ? "oklch(0.42 0.12 155)"
-                          : isTrough
-                          ? "oklch(0.45 0.16 25)"
-                          : "var(--muted)",
+                            ? "oklch(0.42 0.12 155)"
+                            : isTrough
+                              ? "oklch(0.45 0.16 25)"
+                              : "var(--muted)",
                       }}
                     >
                       {v}
@@ -176,32 +191,12 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
                         background: barColor,
                         borderRadius: "4px 4px 0 0",
                         transition: "height .5s ease",
-                        position: "relative",
                       }}
-                    >
-                      {isTomorrow && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: -16,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: "var(--accent-ink)",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                    
-                        </div>
-                      )}
-                    </div>
+                    />
                   </div>
                 );
               })}
             </div>
-
-            {/* 요일 레이블 */}
             <div
               style={{
                 display: "grid",
@@ -223,18 +218,16 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
                       i === tomorrowDow
                         ? "var(--accent-ink)"
                         : i === peakDow
-                        ? "oklch(0.42 0.12 155)"
-                        : i === troughDow
-                        ? "oklch(0.45 0.16 25)"
-                        : "var(--muted)",
+                          ? "oklch(0.42 0.12 155)"
+                          : i === troughDow
+                            ? "oklch(0.45 0.16 25)"
+                            : "var(--muted)",
                   }}
                 >
                   {d}
                 </div>
               ))}
             </div>
-
-            {/* 범례 */}
             <div
               style={{
                 display: "flex",
@@ -246,8 +239,8 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
             >
               {[
                 { color: "var(--accent)", label: "내일" },
-                { color: "oklch(0.66 0.13 155)", label: "최고 예측일" },
-                { color: "oklch(0.70 0.14 25)", label: "최저 예측일" },
+                { color: "oklch(0.66 0.13 155)", label: "최고" },
+                { color: "oklch(0.70 0.14 25)", label: "최저" },
               ].map((l) => (
                 <div
                   key={l.label}
@@ -270,25 +263,8 @@ export default function PredictionDetail({ tomorrow, nextWeek, compact = false }
           </div>
         ) : (
           <p style={{ margin: 0, fontSize: 13, color: "var(--muted-2)" }}>
-            {nextWeek === undefined ? "불러오는 중..." : "예측 데이터가 없습니다."}
+            {nextWeek === null ? "불러오는 중..." : "예측 데이터가 없습니다."}
           </p>
-        )}
-
-        {/* 신뢰 구간 안내 */}
-        {!compact && (
-          <div
-            style={{
-              padding: "10px 13px",
-              background: "#F7F9FC",
-              borderRadius: 9,
-              fontSize: 12,
-              color: "var(--muted)",
-              lineHeight: 1.6,
-            }}
-          >
-            신뢰 구간(±1.5σ) 표시는 백엔드에서 σ_dow 값을 내려줘야 활성화됩니다.
-            현재는 요일·날씨·트렌드 반영 최종 예측값만 표시합니다.
-          </div>
         )}
       </div>
     </div>
