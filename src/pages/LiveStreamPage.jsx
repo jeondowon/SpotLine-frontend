@@ -17,29 +17,6 @@ const CAMERA_PERMISSION_LABEL = {
   unsupported: '확인 불가',
 }
 
-function getCameraStream(constraints) {
-  if (navigator.mediaDevices?.getUserMedia) {
-    return navigator.mediaDevices.getUserMedia(constraints)
-  }
-
-  const legacyGetUserMedia = (
-    navigator.getUserMedia ||
-    navigator.webkitGetUserMedia ||
-    navigator.mozGetUserMedia ||
-    navigator.msGetUserMedia
-  )
-
-  if (legacyGetUserMedia) {
-    return new Promise((resolve, reject) => {
-      legacyGetUserMedia.call(navigator, constraints, resolve, reject)
-    })
-  }
-
-  const error = new Error('Camera capture is not supported in this browser context.')
-  error.name = 'NotSupportedError'
-  return Promise.reject(error)
-}
-
 export default function LiveStreamPage() {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -52,28 +29,11 @@ export default function LiveStreamPage() {
   const [chunkCount, setChunkCount] = useState(0)
   const [sendError, setSendError] = useState(false)
   const [error, setError] = useState(null)
-  const [cameraPermission, setCameraPermission] = useState('unsupported')
+  const [cameraPermission, setCameraPermission] = useState('prompt')
 
   const [visionData, setVisionData] = useState(null)
   const [flashKeys, setFlashKeys] = useState({})
   const prevDataRef = useRef(null)
-
-  const refreshCameraPermission = useCallback(async () => {
-    if (!navigator.permissions?.query) {
-      setCameraPermission('unsupported')
-      return null
-    }
-
-    try {
-      const status = await navigator.permissions.query({ name: 'camera' })
-      setCameraPermission(status.state)
-      status.onchange = () => setCameraPermission(status.state)
-      return status.state
-    } catch {
-      setCameraPermission('unsupported')
-      return null
-    }
-  }, [])
 
   const pollVision = useCallback(async () => {
     try {
@@ -100,10 +60,6 @@ export default function LiveStreamPage() {
     const id = setInterval(pollVision, POLL_MS)
     return () => clearInterval(id)
   }, [pollVision])
-
-  useEffect(() => {
-    refreshCameraPermission()
-  }, [refreshCameraPermission])
 
   const refreshYoloVideo = useCallback((delay = 0) => {
     const updateSource = () => {
@@ -177,19 +133,22 @@ export default function LiveStreamPage() {
   async function startStream() {
     try {
       setError(null)
-      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
-      if (!window.isSecureContext && !isLocalhost) {
-        setError('카메라 권한 요청은 HTTPS 주소에서만 가능합니다. https://spotline.seohamin.com으로 접속해주세요.')
-        return
-      }
-      if (!window.MediaRecorder) {
-        setError('이 브라우저는 영상 녹화 기능을 지원하지 않습니다. Chrome, Edge, Safari 최신 버전으로 접속해주세요.')
-        return
-      }
-      const stream = await getCameraStream({ video: true, audio: false })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      })
       setCameraPermission('granted')
       streamRef.current = stream
       videoRef.current.srcObject = stream
+
+      if (!window.MediaRecorder) {
+        stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+        if (videoRef.current) videoRef.current.srcObject = null
+        setError('이 브라우저는 영상 녹화 기능을 지원하지 않습니다. Chrome, Edge, Safari 최신 버전으로 접속해주세요.')
+        return
+      }
+
       mimeTypeRef.current = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')
         ? 'video/mp4;codecs=avc1'
         : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
@@ -197,20 +156,9 @@ export default function LiveStreamPage() {
           : 'video/webm'
       setIsStreaming(true)
       recordNextChunk()
-      // 분석 영상 연결은 마운트 시 영속 연결(useEffect)에서 관리하므로 여기서 열지 않는다.
-    } catch (err) {
-      await refreshCameraPermission()
-      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-        setCameraPermission('denied')
-        setError('카메라 권한이 차단되었습니다. 브라우저 주소창의 권한 설정에서 카메라를 허용해주세요.')
-        return
-      }
-      if (err?.name === 'NotSupportedError') {
-        setCameraPermission('unsupported')
-        setError('현재 브라우저 환경에서는 카메라 권한 요청 API가 노출되지 않습니다. HTTPS 주소와 최신 브라우저로 접속해주세요.')
-        return
-      }
-      setError('카메라를 시작할 수 없습니다. 카메라 연결 상태와 브라우저 권한을 확인해주세요.')
+    } catch {
+      setCameraPermission('denied')
+      setError('카메라 권한이 차단되어 있습니다. 브라우저 설정에서 카메라를 허용해주세요.')
     }
   }
 
@@ -224,7 +172,6 @@ export default function LiveStreamPage() {
     if (recorder && recorder.state !== 'inactive') recorder.stop()
     stream?.getTracks().forEach(t => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
-    // 분석 영상 연결은 끊지 않는다 (끊으면 백엔드 sink가 autoCancel로 죽음)
     setIsStreaming(false)
   }
 
@@ -267,9 +214,7 @@ export default function LiveStreamPage() {
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>카메라 권한</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
-                  {window.isSecureContext
-                    ? '라이브 분석을 시작하려면 이 페이지에서 카메라 접근을 허용해야 합니다.'
-                    : '카메라 권한 요청은 HTTPS 접속에서만 동작합니다.'}
+                  라이브 분석을 시작하려면 이 페이지에서 카메라 접근을 허용해야 합니다.
                 </div>
               </div>
             </div>
@@ -349,7 +294,6 @@ export default function LiveStreamPage() {
           </div>
         </div>
 
-        {/* 실시간 분석 데이터 */}
         <div className="card">
           <div className="card-h">
             <Ic.Chart />
